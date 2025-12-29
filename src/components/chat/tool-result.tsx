@@ -45,25 +45,45 @@ export function ToolResult({ toolName, state, args, result, toolCallId, onToolRe
 
     // Render based on tool name
     switch (toolName) {
-        case 'searchRooms': {
-            const data = result as { rooms?: unknown[]; count?: number; error?: string };
+        case 'searchRooms':
+        case 'searchRoomsWithPreferences': {
+            const data = result as {
+                rooms?: unknown[];
+                totalAvailable?: number;
+                needsPreferences?: boolean;
+                error?: string;
+                message?: string;
+            };
+
             if (data?.error) {
                 return <ErrorCard message={data.error} />;
             }
+
+            // If needsPreferences is true, don't show cards - AI will ask for preferences
+            if (data?.needsPreferences) {
+                return null;
+            }
+
             if (data?.rooms && Array.isArray(data.rooms) && data.rooms.length > 0) {
                 return (
                     <div className="space-y-4">
                         <p className="text-sm text-[var(--muted)]">
-                            Found {data.count || data.rooms.length} available room{(data.count || data.rooms.length) !== 1 ? 's' : ''}
+                            Found {data.totalAvailable || data.rooms.length} available room{(data.totalAvailable || data.rooms.length) !== 1 ? 's' : ''}
                         </p>
                         <div className="flex flex-wrap gap-4">
-                            {data.rooms.slice(0, 3).map((room: any) => (
+                            {data.rooms.slice(0, 10).map((room: any) => (
                                 <RoomCard key={room.id} room={room} />
                             ))}
                         </div>
                     </div>
                 );
             }
+
+            // Only show "no rooms" if success is explicitly false
+            if (data?.message) {
+                return <InfoCard message={data.message} />;
+            }
+
             return <InfoCard message="No rooms available for your selected dates and criteria." />;
         }
 
@@ -155,6 +175,11 @@ export function ToolResult({ toolName, state, args, result, toolCallId, onToolRe
             );
         }
 
+        case 'endChat': {
+            const data = result as { endChat?: boolean; farewell?: string; redirectTo?: string; reason?: string };
+            return <EndChatCard farewell={data.farewell || 'Thank you for using HotelAI!'} redirectTo={data.redirectTo || '/'} />;
+        }
+
         default:
             return null;
     }
@@ -195,3 +220,42 @@ function ErrorCard({ message }: { message: string }) {
         </div>
     );
 }
+
+function EndChatCard({ farewell, redirectTo }: { farewell: string; redirectTo: string }) {
+    const handleRedirect = () => {
+        window.location.href = redirectTo;
+    };
+
+    return (
+        <div className={cn(
+            "w-full max-w-md rounded-2xl overflow-hidden",
+            "bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30",
+            "border border-emerald-200 dark:border-emerald-800/50",
+            "animate-scaleIn shadow-lg"
+        )}>
+            <div className="p-6 text-center">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center">
+                    <span className="text-3xl">👋</span>
+                </div>
+                <h3 className="text-lg font-semibold text-emerald-800 dark:text-emerald-200 mb-2">
+                    Chat Complete
+                </h3>
+                <p className="text-sm text-emerald-700 dark:text-emerald-300 mb-6">
+                    {farewell}
+                </p>
+                <button
+                    onClick={handleRedirect}
+                    className={cn(
+                        "w-full py-3 px-6 rounded-xl font-medium",
+                        "bg-emerald-600 hover:bg-emerald-700 text-white",
+                        "transition-all duration-200 hover:shadow-md",
+                        "focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
+                    )}
+                >
+                    Return to Home
+                </button>
+            </div>
+        </div>
+    );
+}
+
