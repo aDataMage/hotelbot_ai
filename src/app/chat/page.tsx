@@ -154,15 +154,35 @@ Special Requests: ${result.specialRequests || 'None'}`;
                                         )}
                                     >
                                         {message.parts.map((part, idx) => {
-                                            // Check if this message contains any visual tool parts
-                                            const hasVisualTool = message.parts.some(p =>
-                                                (p.type === 'tool-invocation' && ['searchRooms', 'createBooking', 'searchKnowledge', 'escalateToHuman', 'requestGuestDetails'].includes(p.toolInvocation.toolName)) ||
-                                                (p.type.startsWith('tool-') && ['searchRooms', 'createBooking', 'searchKnowledge', 'escalateToHuman', 'requestGuestDetails'].includes(p.type.replace('tool-', '')))
-                                            );
+                                            // Check if this message has a tool with displayable output
+                                            const hasDisplayableToolResult = message.parts.some(p => {
+                                                // Check old format (tool-invocation)
+                                                if (p.type === 'tool-invocation' && 'result' in p.toolInvocation) {
+                                                    const result = p.toolInvocation.result as any;
+                                                    // Don't hide if needsPreferences with no rooms (show preference questions)
+                                                    if (result?.needsPreferences === true && result?.rooms?.length === 0) {
+                                                        return false;
+                                                    }
+                                                    // Hide for any other tool result
+                                                    return result !== undefined && result !== null;
+                                                }
+                                                // Check new SDK v6 format (tool-searchRooms, etc.)
+                                                if (p.type.startsWith('tool-')) {
+                                                    const toolPart = p as any;
+                                                    const result = toolPart.output;
+                                                    // Don't hide if needsPreferences with no rooms
+                                                    if (result?.needsPreferences === true && result?.rooms?.length === 0) {
+                                                        return false;
+                                                    }
+                                                    // Hide for any other tool result
+                                                    return result !== undefined && result !== null;
+                                                }
+                                                return false;
+                                            });
 
-                                            // Hide text if visual tools are present (to avoid valid/redundant text duplication)
                                             if (part.type === 'text') {
-                                                if (hasVisualTool) return null;
+                                                // Show text if no displayable tool results
+                                                if (hasDisplayableToolResult) return null;
                                                 return (
                                                     <p key={idx} className="whitespace-pre-wrap">
                                                         {part.text}

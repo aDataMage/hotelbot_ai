@@ -22,6 +22,6 @@ export function getVectorConfig(): VectorConfig {
         url: process.env.QDRANT_URL!,
         apiKey: process.env.QDRANT_API_KEY,
         collectionName: 'hotel_knowledge',
-        vectorSize: 768,
+        vectorSize: 1536, // OpenAI text-embedding-3-small dimension
     });
 }
