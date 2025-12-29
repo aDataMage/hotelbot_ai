@@ -17,6 +17,7 @@ import { z } from 'zod';
 import { searchAvailableRooms } from '@/lib/infrastructure/ai/tools/booking-tools';
 import { searchKnowledgeBase } from '@/lib/infrastructure/ai/tools/knowledge-tools';
 import { createBooking } from '@/lib/infrastructure/ai/tools/booking-tools';
+import { getRoomService } from '@/lib/infrastructure/di/container';
 
 // Guardrails: Input validation
 function validateInput(content: string): { valid: boolean; reason?: string } {
@@ -68,17 +69,75 @@ export async function POST(req: Request) {
         // Define AI tools
         const tools = {
             searchRooms: tool({
-                description: 'Search for available rooms based on dates and preferences',
+                description: 'Search for available rooms based on dates and criteria. Returns a list of available rooms or an explicit message.',
                 inputSchema: z.object({
-                    checkInDate: z.string().describe('Check-in date in ISO format'),
-                    checkOutDate: z.string().describe('Check-out date in ISO format'),
-                    guests: z.number().describe('Number of guests'),
+                    checkIn: z.string().describe('Check-in date (YYYY-MM-DD)'),
+                    checkOut: z.string().describe('Check-out date (YYYY-MM-DD)'),
+                    numGuests: z.number().describe('Number of guests'),
+                    roomId: z.string().optional().describe('Specific room ID to check availability for'),
                     bedSize: z.enum(['single', 'double', 'queen', 'king']).optional(),
                     viewType: z.enum(['ocean', 'garden', 'city', 'pool']).optional(),
-                    maxPrice: z.number().optional(),
                 }),
                 execute: async (params) => {
-                    return await searchAvailableRooms(params);
+                    const roomService = getRoomService();
+                    const checkInDate = new Date(params.checkIn);
+                    const checkOutDate = new Date(params.checkOut);
+
+                    // Calculate number of nights
+                    const numberOfNights = Math.ceil((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24));
+
+                    const availableRooms = await roomService.findAvailableRoomsForDates(
+                        checkInDate,
+                        checkOutDate,
+                        {
+                            roomId: params.roomId,
+                            bedSize: params.roomId ? undefined : params.bedSize as any,
+                            viewType: params.roomId ? undefined : params.viewType as any,
+                            minOccupancy: params.numGuests
+                        }
+                    );
+
+                    if (availableRooms.length === 0) {
+                        return {
+                            success: false,
+                            message: "No rooms match your criteria for those dates.",
+                            rooms: []
+                        };
+                    }
+
+                    const rooms = availableRooms.map(r => {
+                        const subtotal = r.basePricePerNight * numberOfNights;
+                        const tax = subtotal * 0.1;
+                        const serviceCharge = subtotal * 0.05;
+                        const total = subtotal + tax + serviceCharge;
+
+                        return {
+                            id: r.id,
+                            roomNumber: r.roomNumber,
+                            name: r.name,
+                            description: r.description,
+                            bedSize: r.bedSize,
+                            viewType: r.viewType,
+                            maxOccupancy: r.maxOccupancy,
+                            amenities: r.amenities,
+                            pricing: {
+                                pricePerNight: r.basePricePerNight,
+                                numberOfNights,
+                                subtotal,
+                                tax,
+                                serviceCharge,
+                                total
+                            }
+                        };
+                    });
+
+                    console.log('SEARCH ROOMS SUCCESS:', rooms);
+
+                    return {
+                        success: true,
+                        message: `Found ${rooms.length} available room(s).`,
+                        rooms
+                    };
                 },
             }),
 
@@ -165,9 +224,14 @@ CRITICAL BOOKING RULES:
 4. NEVER make up room IDs - they are random strings like "abc123xyz456"
 5. If you don't have a valid room ID from a recent search, call searchRooms again
 6. The roomNumber (e.g., "101", "201") is NOT the room ID - never use it as roomId
+7. IMPERATIVE: If the searchRooms tool returns ANY results (even 1), you MUST present them to the user. Do not claim they are unavailable.
+8. If the searchRooms result list is NOT empty, verify with "Would you like to book [Room Name]?"
 
 Booking Process:
-1. Ask for: check-in date, check-out date, number of guests, preferences
+1. Ask for: check-in date, check-out date, number of guests.
+   - EXCEPTION: If the user provides a specific "Room ID" or name (e.g. they came from a specific room page):
+     - IF dates are provided: Immediately call searchRooms with that roomId.
+     - IF dates are MISSING: Ask for check-in and check-out dates ONLY. Do not ask for other preferences.
 2. Use searchRooms to find available options - STORE THE ROOM IDs FROM THE RESPONSE
 3. After searchRooms: DO NOT describe rooms in text - the UI automatically displays room cards
 4. Ask which room they prefer
@@ -176,7 +240,10 @@ Booking Process:
 7. After createBooking: The UI shows the confirmation card. Output ONLY: "Your booking is confirmed!"
 
 UI RESPONSE RULES:
-- When searchRooms returns results: Just ask "Which room would you like?" (UI shows cards)
+- The searchRooms tool returns an object with { success: boolean, message: string, rooms: [...] }
+- If success is TRUE: Offer the room(s) to the user. Say "The [Room Name] is available for your dates. Would you like to book it?"
+- If success is FALSE: Only then say there are no available rooms.
+- CRITICAL: If the tool result contains rooms, do NOT say "No rooms available". Read the 'success' field.
 - When requestGuestDetails is called: Just say "Please fill out this form." (UI shows form)
 - When createBooking succeeds: output ONLY "Your booking is confirmed!"
 - WARNING: NEVER repeat details like prices, dates, or confirmation numbers in text. The UI cards handle all of that.

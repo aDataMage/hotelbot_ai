@@ -49,6 +49,10 @@ export class PostgresRoomRepository implements IRoomRepository {
     async search(criteria: RoomSearchCriteria): Promise<Room[]> {
         const conditions = [];
 
+        if (criteria.roomId) {
+            conditions.push(eq(rooms.id, criteria.roomId));
+        }
+
         if (criteria.bedSize) {
             conditions.push(eq(rooms.bedSize, criteria.bedSize));
         }

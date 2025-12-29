@@ -14,6 +14,7 @@
 import { Room, BedSize, ViewType } from '../models/room';
 
 export interface RoomSearchCriteria {
+    roomId?: string;
     bedSize?: BedSize;
     viewType?: ViewType;
     maxPrice?: number;

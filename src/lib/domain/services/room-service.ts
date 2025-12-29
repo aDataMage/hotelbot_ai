@@ -38,6 +38,7 @@ export class RoomService {
         checkIn: Date,
         checkOut: Date,
         criteria?: {
+            roomId?: string;
             bedSize?: BedSize;
             viewType?: ViewType;
             maxPrice?: number;

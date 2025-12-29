@@ -9,8 +9,12 @@ import { DefaultChatTransport, TextUIPart } from "ai";
 import { cn } from "@/lib/utils";
 import { ToolResult } from "@/components/chat/tool-result";
 
+import { useSearchParams } from "next/navigation";
+
 export default function ChatInterface() {
     const [input, setInput] = useState("");
+    const searchParams = useSearchParams();
+    const hasAutoSent = useRef(false);
 
     const welcomeMessage: TextUIPart = {
         type: 'text',
@@ -34,6 +38,21 @@ export default function ChatInterface() {
             console.error("Chat error:", error);
         }
     });
+
+    // Handle auto-start from room links
+    useEffect(() => {
+        const roomId = searchParams.get("roomId");
+        const intent = searchParams.get("intent");
+
+        if (roomId && !hasAutoSent.current) {
+            hasAutoSent.current = true;
+            const text = `I am looking at room ID "${roomId}" and I'm interested in booking it. Can you help me with availability?`;
+            // Small timeout to ensure the chat is ready and provides a better UX
+            setTimeout(() => {
+                sendMessage({ text });
+            }, 500);
+        }
+    }, [searchParams, sendMessage]);
 
     const isLoading = status === "submitted" || status === "streaming";
     const scrollRef = useRef<HTMLDivElement>(null);

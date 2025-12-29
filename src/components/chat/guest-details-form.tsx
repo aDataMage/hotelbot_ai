@@ -99,6 +99,9 @@ export function GuestDetailsForm({ roomId, onSubmit }: GuestDetailsFormProps) {
                         <input
                             required
                             type="tel"
+                            pattern="[\d\s\+\-\(\)]{10,}"
+                            minLength={10}
+                            title="Please enter a valid phone number (minimum 10 digits)"
                             value={formData.guestPhone}
                             onChange={e => setFormData(prev => ({ ...prev, guestPhone: e.target.value }))}
                             className="w-full px-3 py-2 rounded-lg bg-[var(--background)] border border-[var(--border)] text-sm focus:outline-none focus:border-[var(--gold)] focus:ring-1 focus:ring-[var(--gold)] transition-all"
