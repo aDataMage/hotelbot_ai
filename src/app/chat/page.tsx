@@ -1,0 +1,232 @@
+"use client";
+
+import { useChat } from "@ai-sdk/react";
+import { useEffect, useRef, useState } from "react";
+import { Send, Bot, Sparkles } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { DefaultChatTransport, TextUIPart } from "ai";
+
+import { cn } from "@/lib/utils";
+import { ToolResult } from "@/components/chat/tool-result";
+
+export default function ChatInterface() {
+    const [input, setInput] = useState("");
+
+    const welcomeMessage: TextUIPart = {
+        type: 'text',
+        text: 'Welcome to HotelAI. I\'m your personal concierge, here to help you discover the perfect room, check availability, and answer any questions about your stay. How may I assist you today?',
+        state: 'done'
+    };
+
+    const { messages, sendMessage, status, error } = useChat({
+        transport: new DefaultChatTransport({
+            api: '/api/chat',
+            credentials: 'include',
+        }),
+        messages: [
+            {
+                id: 'welcome',
+                role: 'assistant',
+                parts: [welcomeMessage],
+            },
+        ],
+        onError: (error) => {
+            console.error("Chat error:", error);
+        }
+    });
+
+    const isLoading = status === "submitted" || status === "streaming";
+    const scrollRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (scrollRef.current) {
+            scrollRef.current.scrollTo({
+                top: scrollRef.current.scrollHeight,
+                behavior: "smooth",
+            });
+        }
+    }, [messages, isLoading]);
+
+    const handleSubmit = async (e: React.FormEvent | React.MouseEvent) => {
+        e.preventDefault();
+        if (!input.trim() || isLoading) return;
+
+        const userMessage = input;
+        setInput("");
+
+        sendMessage({ text: userMessage });
+    };
+
+    return (
+        <div className="flex flex-col h-screen bg-[var(--background)]">
+            {/* Header */}
+            <header className="flex items-center justify-between px-6 py-4 border-b border-[var(--border)]">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full gradient-gold flex items-center justify-center shadow-md">
+                        <Sparkles className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                        <h1 className="text-lg font-semibold tracking-tight">HotelAI Concierge</h1>
+                        <p className="text-xs text-[var(--muted)]">Your personal assistant</p>
+                    </div>
+                </div>
+                <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        Online
+                    </span>
+                </div>
+            </header>
+
+            {/* Messages Container - FIXED OVERFLOW */}
+            <div
+                ref={scrollRef}
+                className="flex-1 overflow-y-auto custom-scrollbar"
+            >
+                <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
+                    <AnimatePresence initial={false}>
+                        {messages.map((message, index) => (
+                            <motion.div
+                                key={message.id}
+                                initial={{ opacity: 0, y: 16 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{
+                                    duration: 0.35,
+                                    ease: [0.25, 0.1, 0.25, 1],
+                                    delay: index === messages.length - 1 ? 0.05 : 0
+                                }}
+                                className={cn(
+                                    "flex gap-3",
+                                    message.role === "user" ? "justify-end" : "justify-start"
+                                )}
+                            >
+                                {/* AI Avatar */}
+                                {message.role === "assistant" && (
+                                    <div className="flex-shrink-0 w-9 h-9 rounded-full gradient-gold flex items-center justify-center shadow-md ring-2 ring-[var(--gold-light)]/30">
+                                        <Bot className="w-4 h-4 text-white" />
+                                    </div>
+                                )}
+
+                                {/* Message Bubble */}
+                                <div
+                                    className={cn(
+                                        "max-w-[80%] rounded-2xl px-4 py-3 text-[15px] leading-relaxed",
+                                        message.role === "user"
+                                            ? "gradient-gold text-white shadow-md"
+                                            : "glass bg-[var(--surface)] shadow-sm border border-[var(--border)]"
+                                    )}
+                                >
+                                    {message.parts.map((part, idx) => {
+                                        if (part.type === 'text') {
+                                            return (
+                                                <p key={idx} className="whitespace-pre-wrap">
+                                                    {part.text}
+                                                </p>
+                                            );
+                                        }
+                                        if (part.type === 'tool-invocation') {
+                                            return (
+                                                <div key={idx} className="mt-3 first:mt-0">
+                                                    <ToolResult
+                                                        toolName={part.toolInvocation.toolName}
+                                                        state={part.toolInvocation.state}
+                                                        args={part.toolInvocation.args}
+                                                        result={'result' in part.toolInvocation ? part.toolInvocation.result : undefined}
+                                                    />
+                                                </div>
+                                            );
+                                        }
+                                        return null;
+                                    })}
+                                </div>
+
+                                {/* User Avatar */}
+                                {message.role === "user" && (
+                                    <div className="flex-shrink-0 w-9 h-9 rounded-full bg-[var(--surface-dim)] flex items-center justify-center shadow-sm border border-[var(--border)]">
+                                        <span className="text-sm font-medium text-[var(--foreground)]">You</span>
+                                    </div>
+                                )}
+                            </motion.div>
+                        ))}
+
+                        {/* Loading Indicator */}
+                        {isLoading && messages[messages.length - 1]?.role === "user" && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 12 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -8 }}
+                                className="flex gap-3 justify-start"
+                            >
+                                <div className="flex-shrink-0 w-9 h-9 rounded-full gradient-gold flex items-center justify-center shadow-md ring-2 ring-[var(--gold-light)]/30">
+                                    <Bot className="w-4 h-4 text-white" />
+                                </div>
+                                <div className="glass bg-[var(--surface)] rounded-2xl px-5 py-4 shadow-sm border border-[var(--border)]">
+                                    <div className="flex items-center gap-1.5">
+                                        <span className="w-2 h-2 rounded-full bg-[var(--gold)] typing-dot" />
+                                        <span className="w-2 h-2 rounded-full bg-[var(--gold)] typing-dot" />
+                                        <span className="w-2 h-2 rounded-full bg-[var(--gold)] typing-dot" />
+                                    </div>
+                                </div>
+                            </motion.div>
+                        )}
+
+                        {/* Error State */}
+                        {error && (
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                className="flex justify-center"
+                            >
+                                <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800/50 rounded-xl px-4 py-3 max-w-md">
+                                    <p className="text-sm text-red-600 dark:text-red-400">
+                                        {error.message || "Something went wrong. Please try again."}
+                                    </p>
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </div>
+            </div>
+
+            {/* Input Area */}
+            <div className="border-t border-[var(--border)] bg-[var(--background)]">
+                <div className="max-w-3xl mx-auto px-4 py-4">
+                    <form onSubmit={handleSubmit} className="relative">
+                        <input
+                            value={input}
+                            onChange={(e) => setInput(e.target.value)}
+                            placeholder="Type your message..."
+                            className={cn(
+                                "w-full px-5 py-3.5 pr-14 rounded-full",
+                                "bg-[var(--surface)] border border-[var(--border)]",
+                                "text-[15px] text-[var(--foreground)] placeholder:text-[var(--muted)]",
+                                "shadow-sm transition-all duration-200",
+                                "focus:outline-none focus:border-[var(--gold)] focus:shadow-[0_0_0_3px_var(--ring)]",
+                                "disabled:opacity-50 disabled:cursor-not-allowed"
+                            )}
+                            disabled={isLoading}
+                        />
+                        <button
+                            type="submit"
+                            disabled={isLoading || !input.trim()}
+                            className={cn(
+                                "absolute right-2 top-1/2 -translate-y-1/2",
+                                "w-10 h-10 rounded-full flex items-center justify-center",
+                                "transition-all duration-200",
+                                input.trim() && !isLoading
+                                    ? "gradient-gold text-white shadow-md hover:shadow-lg hover:scale-105"
+                                    : "bg-[var(--surface-dim)] text-[var(--muted)] cursor-not-allowed"
+                            )}
+                        >
+                            <Send className="w-4 h-4" />
+                            <span className="sr-only">Send message</span>
+                        </button>
+                    </form>
+                    <p className="text-center mt-3 text-[11px] text-[var(--muted)]">
+                        AI responses may not always be accurate. Please verify important booking details.
+                    </p>
+                </div>
+            </div>
+        </div>
+    );
+}
