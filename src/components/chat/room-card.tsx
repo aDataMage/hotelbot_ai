@@ -17,8 +17,8 @@ interface RoomData {
     maxOccupancy: number;
     amenities: string[];
     pricing: {
-        perNight: number;
-        nights: number;
+        pricePerNight: number;
+        numberOfNights: number;
         subtotal: number;
         tax: number;
         serviceCharge: number;
@@ -85,12 +85,12 @@ export function RoomCard({ room, onSelect }: RoomCardProps) {
                                 {room.pricing.total.toFixed(0)}
                             </p>
                             <p className="text-xs text-[var(--muted)]">
-                                {room.pricing.nights} night{room.pricing.nights > 1 ? 's' : ''} · incl. taxes
+                                {room.pricing.numberOfNights} night{room.pricing.numberOfNights > 1 ? 's' : ''} · incl. taxes
                             </p>
                         </div>
                         <div className="text-right">
                             <p className="text-sm text-[var(--muted)]">
-                                ${room.pricing.perNight}<span className="text-xs">/night</span>
+                                ${room.pricing.pricePerNight}<span className="text-xs">/night</span>
                             </p>
                         </div>
                     </div>

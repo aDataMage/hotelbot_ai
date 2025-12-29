@@ -22,8 +22,12 @@ export async function searchAvailableRooms(params: {
     maxPrice?: number;
 }) {
     try {
+        console.log('🔍 searchAvailableRooms called with:', params);
+
         const checkIn = parseISO(params.checkInDate);
         const checkOut = parseISO(params.checkOutDate);
+
+        console.log('📅 Parsed dates:', { checkIn, checkOut });
 
         if (checkOut <= checkIn) {
             return { error: 'Check-out date must be after check-in date' };
@@ -44,6 +48,8 @@ export async function searchAvailableRooms(params: {
                 minOccupancy: params.guests,
             }
         );
+
+        console.log('🏨 Available rooms found:', availableRooms.length);
 
         if (availableRooms.length === 0) {
             return {
@@ -69,6 +75,9 @@ export async function searchAvailableRooms(params: {
             };
         });
 
+        // Log the IDs for debugging
+        console.log('🔍 searchRooms returning rooms:', roomsWithPricing.map(r => ({ id: r.id, name: r.name })));
+
         return {
             rooms: roomsWithPricing,
             count: roomsWithPricing.length,
@@ -93,6 +102,8 @@ export async function createBooking(params: {
     specialRequests?: string;
 }) {
     try {
+        console.log('📦 createBooking called with roomId:', params.roomId);
+
         const checkIn = parseISO(params.checkInDate);
         const checkOut = parseISO(params.checkOutDate);
 

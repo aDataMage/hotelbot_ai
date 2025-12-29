@@ -6,6 +6,7 @@
  */
 import { RoomCard } from "./room-card";
 import { BookingCard } from "./booking-card";
+import { GuestDetailsForm } from "./guest-details-form";
 import { Info, AlertTriangle, Search, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -14,9 +15,11 @@ interface ToolResultProps {
     state: 'partial-call' | 'call' | 'result';
     args?: Record<string, unknown>;
     result?: unknown;
+    toolCallId?: string;
+    onToolResult?: (toolCallId: string, result: any) => void;
 }
 
-export function ToolResult({ toolName, state, args, result }: ToolResultProps) {
+export function ToolResult({ toolName, state, args, result, toolCallId, onToolResult }: ToolResultProps) {
     // Show loading state for pending tool calls
     if (state === 'partial-call' || state === 'call') {
         return (
@@ -140,6 +143,15 @@ export function ToolResult({ toolName, state, args, result }: ToolResultProps) {
                         </div>
                     </div>
                 </div>
+            );
+        }
+
+        case 'requestGuestDetails': {
+            return (
+                <GuestDetailsForm
+                    roomId={args?.roomId as string}
+                    onSubmit={(data) => onToolResult?.(toolCallId || 'unknown', data)}
+                />
             );
         }
 

@@ -57,10 +57,21 @@ export default function ChatInterface() {
         sendMessage({ text: userMessage });
     };
 
+    const handleToolResult = (toolCallId: string, result: any) => {
+        const text = `Here are my booking details:
+Name: ${result.guestName}
+Email: ${result.guestEmail}
+Phone: ${result.guestPhone}
+Special Requests: ${result.specialRequests || 'None'}`;
+
+        sendMessage({ text });
+    };
+
     return (
         <div className="flex flex-col h-screen bg-[var(--background)]">
             {/* Header */}
             <header className="flex items-center justify-between px-6 py-4 border-b border-[var(--border)]">
+                {/* ... existing header code ... */}
                 <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full gradient-gold flex items-center justify-center shadow-md">
                         <Sparkles className="w-5 h-5 text-white" />
@@ -78,76 +89,112 @@ export default function ChatInterface() {
                 </div>
             </header>
 
-            {/* Messages Container - FIXED OVERFLOW */}
+            {/* Messages Container */}
             <div
                 ref={scrollRef}
                 className="flex-1 overflow-y-auto custom-scrollbar"
             >
                 <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
                     <AnimatePresence initial={false}>
-                        {messages.map((message, index) => (
-                            <motion.div
-                                key={message.id}
-                                initial={{ opacity: 0, y: 16 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{
-                                    duration: 0.35,
-                                    ease: [0.25, 0.1, 0.25, 1],
-                                    delay: index === messages.length - 1 ? 0.05 : 0
-                                }}
-                                className={cn(
-                                    "flex gap-3",
-                                    message.role === "user" ? "justify-end" : "justify-start"
-                                )}
-                            >
-                                {/* AI Avatar */}
-                                {message.role === "assistant" && (
-                                    <div className="flex-shrink-0 w-9 h-9 rounded-full gradient-gold flex items-center justify-center shadow-md ring-2 ring-[var(--gold-light)]/30">
-                                        <Bot className="w-4 h-4 text-white" />
-                                    </div>
-                                )}
+                        {messages.map((message, index) => {
+                            // Hide automated form submission messages
+                            if (message.role === 'user' &&
+                                message.parts.some(p => p.type === 'text' && p.text.startsWith('Here are my booking details:'))) {
+                                return null;
+                            }
 
-                                {/* Message Bubble */}
-                                <div
+                            return (
+                                <motion.div
+                                    key={message.id}
+                                    initial={{ opacity: 0, y: 16 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{
+                                        duration: 0.35,
+                                        ease: [0.25, 0.1, 0.25, 1],
+                                        delay: index === messages.length - 1 ? 0.05 : 0
+                                    }}
                                     className={cn(
-                                        "max-w-[80%] rounded-2xl px-4 py-3 text-[15px] leading-relaxed",
-                                        message.role === "user"
-                                            ? "gradient-gold text-white shadow-md"
-                                            : "glass bg-[var(--surface)] shadow-sm border border-[var(--border)]"
+                                        "flex gap-3",
+                                        message.role === "user" ? "justify-end" : "justify-start"
                                     )}
                                 >
-                                    {message.parts.map((part, idx) => {
-                                        if (part.type === 'text') {
-                                            return (
-                                                <p key={idx} className="whitespace-pre-wrap">
-                                                    {part.text}
-                                                </p>
-                                            );
-                                        }
-                                        if (part.type === 'tool-invocation') {
-                                            return (
-                                                <div key={idx} className="mt-3 first:mt-0">
-                                                    <ToolResult
-                                                        toolName={part.toolInvocation.toolName}
-                                                        state={part.toolInvocation.state}
-                                                        args={part.toolInvocation.args}
-                                                        result={'result' in part.toolInvocation ? part.toolInvocation.result : undefined}
-                                                    />
-                                                </div>
-                                            );
-                                        }
-                                        return null;
-                                    })}
-                                </div>
+                                    {/* AI Avatar */}
+                                    {message.role === "assistant" && (
+                                        <div className="flex-shrink-0 w-9 h-9 rounded-full gradient-gold flex items-center justify-center shadow-md ring-2 ring-[var(--gold-light)]/30">
+                                            <Bot className="w-4 h-4 text-white" />
+                                        </div>
+                                    )}
 
-                                {/* User Avatar */}
-                                {message.role === "user" && (
-                                    <div className="flex-shrink-0 w-9 h-9 rounded-full bg-[var(--surface-dim)] flex items-center justify-center shadow-sm border border-[var(--border)]">
-                                        <span className="text-sm font-medium text-[var(--foreground)]">You</span>
+                                    {/* Message Bubble */}
+                                    <div
+                                        className={cn(
+                                            "max-w-[80%] rounded-2xl px-4 py-3 text-[15px] leading-relaxed",
+                                            message.role === "user"
+                                                ? "gradient-gold text-white shadow-md"
+                                                : "glass bg-[var(--surface)] shadow-sm border border-[var(--border)]"
+                                        )}
+                                    >
+                                        {message.parts.map((part, idx) => {
+                                            // Check if this message contains any visual tool parts
+                                            const hasVisualTool = message.parts.some(p =>
+                                                (p.type === 'tool-invocation' && ['searchRooms', 'createBooking', 'searchKnowledge', 'escalateToHuman', 'requestGuestDetails'].includes(p.toolInvocation.toolName)) ||
+                                                (p.type.startsWith('tool-') && ['searchRooms', 'createBooking', 'searchKnowledge', 'escalateToHuman', 'requestGuestDetails'].includes(p.type.replace('tool-', '')))
+                                            );
+
+                                            // Hide text if visual tools are present (to avoid valid/redundant text duplication)
+                                            if (part.type === 'text') {
+                                                if (hasVisualTool) return null;
+                                                return (
+                                                    <p key={idx} className="whitespace-pre-wrap">
+                                                        {part.text}
+                                                    </p>
+                                                );
+                                            }
+                                            // Handle tool-invocation (old format)
+                                            if (part.type === 'tool-invocation') {
+                                                return (
+                                                    <div key={idx} className="mt-3 first:mt-0">
+                                                        <ToolResult
+                                                            toolName={part.toolInvocation.toolName}
+                                                            state={part.toolInvocation.state}
+                                                            args={part.toolInvocation.args}
+                                                            result={'result' in part.toolInvocation ? part.toolInvocation.result : undefined}
+                                                            toolCallId={part.toolInvocation.toolCallId}
+                                                            onToolResult={handleToolResult}
+                                                        />
+                                                    </div>
+                                                );
+                                            }
+                                            // Handle tool-{toolName} format (AI SDK v6)
+                                            if (part.type.startsWith('tool-')) {
+                                                const toolPart = part as any;
+                                                const toolName = part.type.replace('tool-', '');
+                                                return (
+                                                    <div key={idx} className="mt-3 first:mt-0">
+                                                        <ToolResult
+                                                            toolName={toolName}
+                                                            state={toolPart.state === 'output-available' ? 'result' : 'call'}
+                                                            args={toolPart.input}
+                                                            result={toolPart.output}
+                                                            toolCallId={toolPart.toolCallId}
+                                                            onToolResult={handleToolResult}
+                                                        />
+                                                    </div>
+                                                );
+                                            }
+                                            return null;
+                                        })}
                                     </div>
-                                )}
-                            </motion.div>
-                        ))}
+
+                                    {/* User Avatar */}
+                                    {message.role === "user" && (
+                                        <div className="flex-shrink-0 w-9 h-9 rounded-full bg-[var(--surface-dim)] flex items-center justify-center shadow-sm border border-[var(--border)]">
+                                            <span className="text-sm font-medium text-[var(--foreground)]">You</span>
+                                        </div>
+                                    )}
+                                </motion.div>
+                            );
+                        })}
 
                         {/* Loading Indicator */}
                         {isLoading && messages[messages.length - 1]?.role === "user" && (
@@ -226,7 +273,7 @@ export default function ChatInterface() {
                         AI responses may not always be accurate. Please verify important booking details.
                     </p>
                 </div>
-            </div>
-        </div>
+            </div >
+        </div >
     );
 }

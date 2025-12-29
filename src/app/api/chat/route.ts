@@ -11,7 +11,7 @@
  * - src/lib/infrastructure/ai/agents/* (Agent Graph - potential integration)
  */
 // src/app/api/chat/route.ts
-import { streamText, tool, stepCountIs } from 'ai';
+import { streamText, tool, stepCountIs, convertToModelMessages } from 'ai';
 import { openai } from '@ai-sdk/openai';
 import { z } from 'zod';
 import { searchAvailableRooms } from '@/lib/infrastructure/ai/tools/booking-tools';
@@ -63,27 +63,7 @@ export async function POST(req: Request) {
         }
 
         // Convert UI messages to model messages
-        const modelMessages = messages.map((msg: any) => {
-            // Handle system messages
-            if (msg.role === 'system') {
-                return {
-                    role: 'system',
-                    content: msg.parts
-                        .filter((part: any) => part.type === 'text')
-                        .map((part: any) => part.text)
-                        .join(' ')
-                };
-            }
-
-            // Handle user/assistant messages
-            return {
-                role: msg.role,
-                content: msg.parts
-                    .filter((part: any) => part.type === 'text')
-                    .map((part: any) => part.text)
-                    .join(' ')
-            };
-        });
+        const modelMessages = await convertToModelMessages(messages);
 
         // Define AI tools
         const tools = {
@@ -115,7 +95,7 @@ export async function POST(req: Request) {
             }),
 
             createBooking: tool({
-                description: 'Create a new room booking. Only use this when the user has confirmed all details. IMPORTANT: Use the exact room "id" field from searchRooms results (NOT the roomNumber or name).',
+                description: 'Create a new room booking. This triggers a visual confirmation card in the UI. Do NOT describe the booking details in text, just call this tool.',
                 inputSchema: z.object({
                     roomId: z.string().describe('The room id from searchRooms results (e.g., "abc123xyz"). NOT the room number - use the "id" field.'),
                     checkInDate: z.string(),
@@ -128,6 +108,16 @@ export async function POST(req: Request) {
                 }),
                 execute: async (params) => {
                     return await createBooking(params);
+                },
+            }),
+
+            requestGuestDetails: tool({
+                description: 'Ask the user to provide their details (name, email, phone) for a booking via a structured form.',
+                inputSchema: z.object({
+                    roomId: z.string().describe('The room ID being booked'),
+                }),
+                execute: async ({ roomId }) => {
+                    return { roomId, status: 'waiting_for_input' };
                 },
             }),
 
@@ -149,12 +139,8 @@ export async function POST(req: Request) {
             }),
         };
 
-        // Stream response with AI SDK 6
-        const result = streamText({
-            model: openai('gpt-4o'),
-            stopWhen: stepCountIs(5), // Allow up to 5 steps for tool calls and responses
-            messages: modelMessages,
-            system: `You are an AI-powered hotel concierge assistant for HotelAI.
+        const systemPrompt = `
+You are an AI-powered hotel concierge assistant for HotelAI.
 
 Your Capabilities:
 - Help guests search and book rooms
@@ -170,15 +156,30 @@ Your Approach:
 4. Provide specific, accurate information
 5. Use tools to search knowledge base and availability
 6. NEVER make up information - use searchKnowledge tool
-7. For bookings: confirm all details (dates, room, guest info) before using createBooking
-8. Escalate to human for: safety issues, legal matters, highly emotional situations
+7. Escalate to human for: safety issues, legal matters, highly emotional situations
+
+CRITICAL BOOKING RULES:
+1. You MUST call searchRooms FIRST before ANY booking attempt
+2. The searchRooms tool returns rooms with an "id" field (e.g., "vyu2l31s2lmmdaejb19i8qyp")
+3. When calling createBooking, you MUST use the EXACT "id" value from searchRooms results
+4. NEVER make up room IDs - they are random strings like "abc123xyz456"
+5. If you don't have a valid room ID from a recent search, call searchRooms again
+6. The roomNumber (e.g., "101", "201") is NOT the room ID - never use it as roomId
 
 Booking Process:
-1. Ask for: check-in date, check-out date, number of guests
-2. Use searchRooms to find available options
-3. Present 2-3 best matches with prices
-4. Confirm guest details (name, email, phone)
-5. Only then use createBooking tool
+1. Ask for: check-in date, check-out date, number of guests, preferences
+2. Use searchRooms to find available options - STORE THE ROOM IDs FROM THE RESPONSE
+3. After searchRooms: DO NOT describe rooms in text - the UI automatically displays room cards
+4. Ask which room they prefer
+5. ONCE A ROOM IS SELECTED (or if user says "nice", "ok", "book it", "I'll take it"): Call requestGuestDetails tool IMMEDIATELY to show the form. DO NOT just say "Please fill out this form" without calling the tool.
+6. When the tool result contains details: Call createBooking with the room "id" and details
+7. After createBooking: The UI shows the confirmation card. Output ONLY: "Your booking is confirmed!"
+
+UI RESPONSE RULES:
+- When searchRooms returns results: Just ask "Which room would you like?" (UI shows cards)
+- When requestGuestDetails is called: Just say "Please fill out this form." (UI shows form)
+- When createBooking succeeds: output ONLY "Your booking is confirmed!"
+- WARNING: NEVER repeat details like prices, dates, or confirmation numbers in text. The UI cards handle all of that.
 
 Knowledge Base Categories:
 - policy: check-in/out times, cancellation, payment, pets, smoking
@@ -188,7 +189,14 @@ Knowledge Base Categories:
 
 Current Date: ${new Date().toISOString().split('T')[0]}
 
-Remember: Be helpful but never compromise guest privacy or hotel security.`,
+Remember: Be helpful but never compromise guest privacy or hotel security.`;
+
+        // Stream response with AI SDK 6
+        const result = streamText({
+            model: openai('gpt-4o'),
+            stopWhen: stepCountIs(5), // Allow up to 5 steps for tool calls and responses
+            messages: modelMessages,
+            system: systemPrompt,
             tools,
             temperature: 0.7,
             onFinish: async ({ text, toolCalls, finishReason, usage }) => {

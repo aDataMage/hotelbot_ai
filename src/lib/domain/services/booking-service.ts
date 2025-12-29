@@ -35,7 +35,9 @@ export class BookingService {
         numberOfGuests: number;
         specialRequests?: string;
     }): Promise<Booking> {
+        console.log('🔍 BookingService.createBooking - looking up roomId:', input.roomId);
         const room = await this.roomRepository.findById(input.roomId);
+        console.log('🔍 BookingService.createBooking - found room:', room ? room.name : 'NULL');
         if (!room) throw new Error('Room not found');
         if (!room.isAvailable) throw new Error('Room is not available');
         if (!room.canAccommodate(input.numberOfGuests)) {
