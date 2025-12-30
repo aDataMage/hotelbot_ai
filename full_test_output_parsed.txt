@@ -1,0 +1,17 @@
+🚀 Starting AI Scenario Testing (105 scenarios)...
+Target: http://localhost:3000/api/chat
+
+Testing [b001] booking: "I want to book a room"... ✅ OK (2590ms)
+Testing [b002] booking: "Do you have any suites available next week?"... ✅ OK (1337ms)
+Testing [b003] booking: "I need a reservation for 2 nights starting tomorrow"... ✅ OK (1806ms)
+Testing [b004] booking: "Book a room with an ocean view"... ✅ OK (2190ms)
+Testing [b005] booking: "Is the penthouse available for Christmas?"... ✅ OK (1531ms)
+Testing [b006] booking: "What are your room rates?"... ✅ OK (1340ms)
+Testing [b007] booking: "I want to modify my existing booking"... ✅ OK (1959ms)
+Testing [b008] booking: "Cancel my reservation"... ✅ OK (2294ms)
+Testing [b009] booking: "Can I check in early?"... ✅ OK (1911ms)
+Testing [b010] booking: "I have a group of 10 people, can we book?"... ✅ OK (1567ms)
+Testing [b011] booking: "Price for a double room?"... ✅ OK (2493ms)
+Testing [b012] booking: "I need to stay for a month"... ✅ OK (1924ms)
+Testing [b013] booking: "Do you have accessible rooms?"... ✅ OK (2052ms)
+Testing [b014] booking: "Book me the cheapest room you have"... 

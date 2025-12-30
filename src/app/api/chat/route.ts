@@ -40,11 +40,17 @@ export async function POST(req: Request) {
         let userText = '';
 
         if (lastMessage.role === 'user') {
-            // Extract text from parts array
-            userText = lastMessage.parts
-                .filter((part: any) => part.type === 'text')
-                .map((part: any) => part.text)
-                .join(' ');
+            // Handle both 'parts' (AI SDK 3.3+ multi-modal) and 'content' (standard/legacy)
+            if (Array.isArray(lastMessage.parts)) {
+                userText = lastMessage.parts
+                    .filter((part: any) => part.type === 'text')
+                    .map((part: any) => part.text)
+                    .join(' ');
+            } else if (typeof lastMessage.content === 'string') {
+                userText = lastMessage.content;
+            } else {
+                userText = ''; // Fallback
+            }
 
             const validation = validateInput(userText);
             if (!validation.valid) {
@@ -56,7 +62,16 @@ export async function POST(req: Request) {
         }
 
         // Convert UI messages to model messages
-        const modelMessages = await convertToModelMessages(messages);
+        let modelMessages;
+        try {
+            modelMessages = await convertToModelMessages(messages);
+        } catch (err) {
+            console.warn('convertToModelMessages failed, falling back to manual conversion:', err);
+            modelMessages = messages.map((m: any) => ({
+                role: m.role,
+                content: m.content || (Array.isArray(m.parts) ? m.parts.filter((p: any) => p.type === 'text').map((p: any) => p.text).join('') : '')
+            }));
+        }
 
         // Build conversation context for intent classification
         const recentMessages = messages.slice(-6); // Last 3 exchanges
@@ -126,7 +141,11 @@ export async function POST(req: Request) {
     } catch (error) {
         console.error('Chat API Error:', error);
         return Response.json(
-            { error: 'Failed to process chat message' },
+            {
+                error: 'Failed to process chat message',
+                details: error instanceof Error ? error.message : String(error),
+                stack: error instanceof Error ? error.stack : undefined
+            },
             { status: 500 }
         );
     }

@@ -1,0 +1,7 @@
+🚀 Starting AI Scenario Testing (1 scenarios)...
+Target: http://localhost:3000/api/chat
+
+Testing [b001] booking: "I want to book a room"... ✅ OK (3554ms)
+
+Generating Report...
+📝 Report saved to: D:\Projects\hotel-bot\hotelbot\ai-test-report.md
