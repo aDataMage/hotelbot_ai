@@ -52,6 +52,8 @@ export async function searchKnowledgeBase(params: {
     try {
         const { query, category = 'all', limit = 5 } = params;
 
+        console.log(`🔍 searchKnowledgeBase: query="${query}", category="${category}"`);
+
         // Generate query embedding
         const queryEmbedding = await generateEmbedding(query);
 
@@ -60,7 +62,7 @@ export async function searchKnowledgeBase(params: {
             vector: queryEmbedding,
             limit,
             with_payload: true,
-            score_threshold: 0.7, // Only return results with similarity > 0.7
+            score_threshold: 0.3, // Lowered to 0.3 for better recall
         };
 
         // Add category filter if specified
@@ -76,6 +78,11 @@ export async function searchKnowledgeBase(params: {
         }
 
         const searchResults = await qdrant.search(COLLECTION_NAME, searchParams);
+
+        console.log(`🔍 Qdrant returned ${searchResults.length} results for "${query}"`);
+        if (searchResults.length > 0) {
+            console.log(`   Top result: ${searchResults[0].payload?.title} (score: ${searchResults[0].score})`);
+        }
 
         if (searchResults.length === 0) {
             return {
@@ -100,7 +107,7 @@ export async function searchKnowledgeBase(params: {
         };
 
     } catch (error) {
-        console.error('Error searching knowledge base:', error);
+        console.error('❌ Error searching knowledge base:', error);
         return { error: 'Failed to search knowledge base' };
     }
 }

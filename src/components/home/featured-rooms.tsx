@@ -31,8 +31,8 @@ export async function FeaturedRooms() {
                                     fill
                                     className="object-cover transition-transform duration-700 group-hover:scale-110"
                                 />
-                                <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-md px-3 py-1 rounded-full text-sm font-semibold text-foreground shadow-sm">
-                                    ${room.basePricePerNight}<span className="text-xs font-normal text-muted-foreground">/night</span>
+                                <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-sm px-3 py-1 rounded-full text-sm font-semibold text-zinc-900 shadow-sm">
+                                    ${room.basePricePerNight}<span className="text-xs font-normal text-zinc-600">/night</span>
                                 </div>
                             </div>
 

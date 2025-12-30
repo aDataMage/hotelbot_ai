@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 import { Utensils, Wifi, Car, BatteryCharging, Dumbbell, Sparkles } from "lucide-react";
 
 const services = [
@@ -51,6 +53,9 @@ export function Services() {
                             Every detail of your stay is curated to ensure maximum relaxation. From our dedicated concierge to our wellness facilities, we have everything you need.
                         </p>
                         <div className="h-1 w-20 bg-[var(--gold)]"></div>
+                        <Button variant="outline" className="mt-4 hover:border-[var(--gold)] hover:text-[var(--gold)]" asChild>
+                            <Link href="/services">View All Services</Link>
+                        </Button>
                     </div>
 
                     <div className="md:w-2/3 grid grid-cols-1 sm:grid-cols-2 gap-8">

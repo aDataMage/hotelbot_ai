@@ -40,9 +40,12 @@ export function Dining() {
                     </div>
                 </div>
 
-                <div className="pt-8">
+                <div className="pt-8 flex gap-4 justify-center">
                     <Button variant="outline" className="text-white border-white hover:bg-white hover:text-black transition-all" asChild>
                         <Link href="/chat">Reserve a Table</Link>
+                    </Button>
+                    <Button className="gradient-gold text-white border-none hover:opacity-90 transition-all shadow-lg" asChild>
+                        <Link href="/dining">View All Restaurants</Link>
                     </Button>
                 </div>
             </div>

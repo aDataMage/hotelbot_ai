@@ -92,46 +92,9 @@ export function ToolResult({ toolName, state, args, result, toolCallId, onToolRe
         }
 
         case 'searchKnowledge': {
-            const data = result as { results?: { title: string; content: string; category: string }[]; error?: string };
-            if (data?.error) {
-                return <ErrorCard message={data.error} />;
-            }
-            if (data?.results && data.results.length > 0) {
-                return (
-                    <div className="space-y-3">
-                        {data.results.slice(0, 3).map((item, idx) => (
-                            <div
-                                key={idx}
-                                className={cn(
-                                    "w-full max-w-md rounded-xl overflow-hidden",
-                                    "bg-[var(--surface)] border border-[var(--border)]",
-                                    "shadow-sm hover-lift transition-all duration-200"
-                                )}
-                            >
-                                <div className="p-4">
-                                    <div className="flex items-start gap-3">
-                                        <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/30 flex items-center justify-center flex-shrink-0">
-                                            <Info className="w-4 h-4 text-blue-500" />
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <h4 className="text-sm font-medium text-[var(--foreground)]">
-                                                {item.title}
-                                            </h4>
-                                            <p className="text-xs text-[var(--muted)] mt-1 line-clamp-2 leading-relaxed">
-                                                {item.content}
-                                            </p>
-                                            <span className="inline-block mt-2 px-2 py-0.5 rounded-full text-[10px] font-medium bg-[var(--surface-dim)] text-[var(--muted)] uppercase tracking-wide">
-                                                {item.category}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                );
-            }
-            return <InfoCard message="No information found for your query." />;
+            // Don't show knowledge results as cards - let the AI synthesize a response
+            // The AI will use these results to create a formatted answer in text
+            return null;
         }
 
         case 'escalateToHuman': {

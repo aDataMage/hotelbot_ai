@@ -45,6 +45,7 @@ Classify the intent and provide a confidence score (0-1).`,
 
 /**
  * Quick intent detection using keyword matching (fallback, no LLM call)
+ * Includes fuzzy matching for common typos
  */
 export function quickClassifyIntent(message: string): Intent {
     const lower = message.toLowerCase();
@@ -61,12 +62,22 @@ export function quickClassifyIntent(message: string): Intent {
     }
 
     // Knowledge keywords - check before booking (questions about hotel)
+    // Include partial matches for typo tolerance
     const knowledgeKeywords = [
+        // Planning keywords - check these FIRST
+        'plan my', 'plan the', 'plan a', 'help me plan', 'itinerary', 'schedule',
+        'suggest', 'recommend', 'what should i', 'things to do',
+        // Policy and info
         'policy', 'policies', 'what time', 'when is', 'where is', 'how do', 'hours',
         'restaurant', 'menu', 'food', 'breakfast', 'lunch', 'dinner', 'spa',
         'gym', 'fitness', 'amenities', 'parking', 'wifi', 'pet', 'pets', 'dog', 'cat',
-        'attraction', 'nearby', 'things to do', 'landmark', 'landmarks', 'tour', 'tours',
-        'smoking', 'cancellation', 'checkout', 'check-out time', 'check-in time'
+        'attraction', 'nearby', 'landmark', 'landmarks', 'tour', 'tours',
+        'smoking', 'cancellation', 'checkout', 'check-out time', 'check-in time',
+        'activities', 'activity', 'fun', 'enjoy', 'what can i do', 'entertainment',
+        'pool hours', 'gym hours', 'restaurant hours', 'bar', 'lounge',
+        // Partial/fuzzy matches for common words
+        'hote', 'hotl', 'restu', 'resta', 'activ', 'ameni', 'facil',
+        'your hotel', 'the hotel', 'this hotel', 'at your', 'at the'
     ];
 
     if (knowledgeKeywords.some(kw => lower.includes(kw))) {

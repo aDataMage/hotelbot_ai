@@ -224,15 +224,15 @@ body {
    ============================================ */
 
 .gradient-gold {
-  background: linear-gradient(135deg, var(--gold) 0%, var(--gold-dark) 100%);
+  background-image: linear-gradient(135deg, var(--gold) 0%, var(--gold-dark) 100%);
 }
 
 .gradient-gold-soft {
-  background: linear-gradient(135deg, var(--gold-light) 0%, var(--gold) 100%);
+  background-image: linear-gradient(135deg, var(--gold-light) 0%, var(--gold) 100%);
 }
 
 .gradient-surface {
-  background: linear-gradient(180deg, var(--surface) 0%, var(--surface-dim) 100%);
+  background-image: linear-gradient(180deg, var(--surface) 0%, var(--surface-dim) 100%);
 }
 
 /* ============================================
