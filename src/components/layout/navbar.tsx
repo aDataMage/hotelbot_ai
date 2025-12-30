@@ -25,13 +25,13 @@ export function Navbar() {
                     <Link href="#rooms" className="text-muted-foreground hover:text-foreground transition-colors">
                         Rooms
                     </Link>
-                    <Link href="#dining" className="text-muted-foreground hover:text-foreground transition-colors">
+                    <Link href="/dining" className="text-muted-foreground hover:text-foreground transition-colors">
                         Dining
                     </Link>
-                    <Link href="#amenities" className="text-muted-foreground hover:text-foreground transition-colors">
-                        Amenities
+                    <Link href="/services" className="text-muted-foreground hover:text-foreground transition-colors">
+                        Services
                     </Link>
-                    <Link href="#location" className="text-muted-foreground hover:text-foreground transition-colors">
+                    <Link href="/location" className="text-muted-foreground hover:text-foreground transition-colors">
                         Location
                     </Link>
                 </nav>
@@ -62,11 +62,14 @@ export function Navbar() {
                         <Link href="#rooms" className="text-sm font-medium p-2 hover:bg-muted rounded-md" onClick={() => setIsMenuOpen(false)}>
                             Rooms
                         </Link>
-                        <Link href="#dining" className="text-sm font-medium p-2 hover:bg-muted rounded-md" onClick={() => setIsMenuOpen(false)}>
+                        <Link href="/dining" className="text-sm font-medium p-2 hover:bg-muted rounded-md" onClick={() => setIsMenuOpen(false)}>
                             Dining
                         </Link>
-                        <Link href="#amenities" className="text-sm font-medium p-2 hover:bg-muted rounded-md" onClick={() => setIsMenuOpen(false)}>
-                            Amenities
+                        <Link href="/services" className="text-sm font-medium p-2 hover:bg-muted rounded-md" onClick={() => setIsMenuOpen(false)}>
+                            Services
+                        </Link>
+                        <Link href="/location" className="text-sm font-medium p-2 hover:bg-muted rounded-md" onClick={() => setIsMenuOpen(false)}>
+                            Location
                         </Link>
                         <Button className="w-full gradient-gold" asChild>
                             <Link href="/chat">Book Now</Link>

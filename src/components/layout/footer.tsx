@@ -35,9 +35,9 @@ export function Footer() {
                         <h4 className="font-semibold mb-4">Explore</h4>
                         <ul className="space-y-2 text-sm text-muted-foreground">
                             <li><Link href="#rooms" className="hover:text-foreground transition-colors">Rooms & Suites</Link></li>
-                            <li><Link href="#dining" className="hover:text-foreground transition-colors">Dining</Link></li>
-                            <li><Link href="#amenities" className="hover:text-foreground transition-colors">Wellness & Spa</Link></li>
-                            <li><Link href="#" className="hover:text-foreground transition-colors">Events</Link></li>
+                            <li><Link href="/dining" className="hover:text-foreground transition-colors">Dining</Link></li>
+                            <li><Link href="/services" className="hover:text-foreground transition-colors">Wellness & Spa</Link></li>
+                            <li><Link href="/location" className="hover:text-foreground transition-colors">Location</Link></li>
                         </ul>
                     </div>
 

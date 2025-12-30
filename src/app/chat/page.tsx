@@ -5,9 +5,11 @@ import { useEffect, useRef, useState } from "react";
 import { Send, Bot, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { DefaultChatTransport, TextUIPart } from "ai";
+import ReactMarkdown from "react-markdown";
 
 import { cn } from "@/lib/utils";
 import { ToolResult } from "@/components/chat/tool-result";
+import { FadeInText } from "@/components/chat/typewriter-text";
 
 import { useSearchParams } from "next/navigation";
 
@@ -155,27 +157,44 @@ Special Requests: ${result.specialRequests || 'None'}`;
                                     >
                                         {message.parts.map((part, idx) => {
                                             // Check if this message has a tool with displayable output
+                                            // Exclude searchKnowledge - we want AI text for knowledge queries
                                             const hasDisplayableToolResult = message.parts.some(p => {
                                                 // Check old format (tool-invocation)
                                                 if (p.type === 'tool-invocation' && 'result' in p.toolInvocation) {
+                                                    const toolName = p.toolInvocation.toolName;
+                                                    // Never hide text for searchKnowledge - let AI synthesize response
+                                                    if (toolName === 'searchKnowledge') return false;
+
                                                     const result = p.toolInvocation.result as any;
                                                     // Don't hide if needsPreferences with no rooms (show preference questions)
                                                     if (result?.needsPreferences === true && result?.rooms?.length === 0) {
                                                         return false;
                                                     }
-                                                    // Hide for any other tool result
-                                                    return result !== undefined && result !== null;
+                                                    // Hide for any other tool with displayable result
+                                                    if (result?.rooms?.length > 0) return true;
+                                                    if (result?.escalated) return true;
+                                                    if (result?.confirmationNumber) return true;
+                                                    if (result?.status === 'waiting_for_input') return true;
+                                                    return false;
                                                 }
                                                 // Check new SDK v6 format (tool-searchRooms, etc.)
                                                 if (p.type.startsWith('tool-')) {
                                                     const toolPart = p as any;
+                                                    const toolName = p.type.replace('tool-', '');
+                                                    // Never hide text for searchKnowledge
+                                                    if (toolName === 'searchKnowledge') return false;
+
                                                     const result = toolPart.output;
                                                     // Don't hide if needsPreferences with no rooms
                                                     if (result?.needsPreferences === true && result?.rooms?.length === 0) {
                                                         return false;
                                                     }
-                                                    // Hide for any other tool result
-                                                    return result !== undefined && result !== null;
+                                                    // Hide only for displayable results
+                                                    if (result?.rooms?.length > 0) return true;
+                                                    if (result?.escalated) return true;
+                                                    if (result?.confirmationNumber) return true;
+                                                    if (result?.status === 'waiting_for_input') return true;
+                                                    return false;
                                                 }
                                                 return false;
                                             });
@@ -183,10 +202,64 @@ Special Requests: ${result.specialRequests || 'None'}`;
                                             if (part.type === 'text') {
                                                 // Show text if no displayable tool results
                                                 if (hasDisplayableToolResult) return null;
+
+                                                // Check if this is the last message and still streaming
+                                                const isLastMessage = index === messages.length - 1;
+                                                const isMessageStreaming = isLastMessage && status === 'streaming';
+
+                                                // If streaming, show loading indicator instead of partial text
+                                                if (isMessageStreaming) {
+                                                    return (
+                                                        <div key={idx} className="flex items-center gap-2 py-2">
+                                                            <motion.div className="flex gap-1">
+                                                                {[0, 1, 2].map((i) => (
+                                                                    <motion.span
+                                                                        key={i}
+                                                                        className="w-2 h-2 rounded-full bg-[var(--gold)]"
+                                                                        animate={{
+                                                                            scale: [1, 1.2, 1],
+                                                                            opacity: [0.5, 1, 0.5],
+                                                                        }}
+                                                                        transition={{
+                                                                            duration: 0.6,
+                                                                            repeat: Infinity,
+                                                                            delay: i * 0.2,
+                                                                        }}
+                                                                    />
+                                                                ))}
+                                                            </motion.div>
+                                                            <span className="text-sm text-[var(--muted)]">Thinking...</span>
+                                                        </div>
+                                                    );
+                                                }
+
+                                                // When complete, fade in the full text
                                                 return (
-                                                    <p key={idx} className="whitespace-pre-wrap">
-                                                        {part.text}
-                                                    </p>
+                                                    <FadeInText key={idx}>
+                                                        <div className="prose prose-sm dark:prose-invert max-w-none">
+                                                            <ReactMarkdown
+                                                                components={{
+                                                                    h3: ({ children }) => (
+                                                                        <h3 className="text-base font-semibold mt-4 mb-2 text-[var(--foreground)]">{children}</h3>
+                                                                    ),
+                                                                    strong: ({ children }) => (
+                                                                        <strong className="font-semibold text-[var(--gold)]">{children}</strong>
+                                                                    ),
+                                                                    ul: ({ children }) => (
+                                                                        <ul className="list-none pl-0 space-y-1">{children}</ul>
+                                                                    ),
+                                                                    li: ({ children }) => (
+                                                                        <li className="text-sm leading-relaxed">{children}</li>
+                                                                    ),
+                                                                    p: ({ children }) => (
+                                                                        <p className="text-sm leading-relaxed my-2">{children}</p>
+                                                                    ),
+                                                                }}
+                                                            >
+                                                                {part.text}
+                                                            </ReactMarkdown>
+                                                        </div>
+                                                    </FadeInText>
                                                 );
                                             }
                                             // Handle tool-invocation (old format)

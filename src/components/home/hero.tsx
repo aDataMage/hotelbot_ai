@@ -21,7 +21,7 @@ export function Hero() {
                     </h2>
                     <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-white tracking-tight leading-tight filter drop-shadow-lg">
                         Experience Luxury <br />
-                        <span className="relative inline-block px-4 py-1 mt-2 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 shadow-2xl">
+                        <span className="relative inline-block px-4 py-1 mt-2 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 shadow-2xl -z-10">
                             <span className="text-transparent bg-clip-text gradient-gold">Redefined by Intelligence</span>
                         </span>
                     </h1>
@@ -45,8 +45,8 @@ export function Hero() {
             </div>
 
             {/* Scroll Indicator */}
-            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
-                <div className="w-[1px] h-16 bg-gradient-to-b from-white to-transparent"></div>
+            <div className="absolute bottom-8 left-0 right-0 flex justify-center z-10">
+                <div className="w-[1px] h-16 bg-gradient-to-b from-white to-transparent animate-bounce"></div>
             </div>
         </section>
     );

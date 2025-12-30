@@ -84,7 +84,8 @@ export async function POST(req: Request) {
         // Classify intent with context awareness
         let intent = quickClassifyIntent(userText) as Intent;
 
-        // If current message is ambiguous but we're in booking flow, stay in booking
+        // Only override general → booking if we're in booking flow
+        // DO NOT override knowledge or service intents
         if (intent === 'general' && isBookingFlow) {
             intent = 'booking';
             console.log('🔄 Context override: general → booking (in booking flow)');
