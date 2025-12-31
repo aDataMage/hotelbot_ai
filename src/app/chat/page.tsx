@@ -1,7 +1,7 @@
 "use client";
 
 import { useChat } from "@ai-sdk/react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, Suspense } from "react";
 import { Send, Bot, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { DefaultChatTransport, TextUIPart } from "ai";
@@ -13,7 +13,7 @@ import { FadeInText } from "@/components/chat/typewriter-text";
 
 import { useSearchParams } from "next/navigation";
 
-export default function ChatInterface() {
+function ChatInterfaceContent() {
     const [input, setInput] = useState("");
     const searchParams = useSearchParams();
     const hasAutoSent = useRef(false);
@@ -119,8 +119,8 @@ Special Requests: ${result.specialRequests || 'None'}`;
                     <AnimatePresence initial={false}>
                         {messages.map((message, index) => {
                             // Hide automated form submission messages
-                            if (message.role === 'user' &&
-                                message.parts.some(p => p.type === 'text' && p.text.startsWith('Here are my booking details:'))) {
+                            if ((message.role as string) === 'user' &&
+                                message.parts.some(p => (p.type as string) === 'text' && (p as any).text.startsWith('Here are my booking details:'))) {
                                 return null;
                             }
 
@@ -136,11 +136,11 @@ Special Requests: ${result.specialRequests || 'None'}`;
                                     }}
                                     className={cn(
                                         "flex gap-3",
-                                        message.role === "user" ? "justify-end" : "justify-start"
+                                        (message.role as string) === "user" ? "justify-end" : "justify-start"
                                     )}
                                 >
                                     {/* AI Avatar */}
-                                    {message.role === "assistant" && (
+                                    {(message.role as string) === "assistant" && (
                                         <div className="flex-shrink-0 w-9 h-9 rounded-full gradient-gold flex items-center justify-center shadow-md ring-2 ring-[var(--gold-light)]/30">
                                             <Bot className="w-4 h-4 text-white" />
                                         </div>
@@ -150,7 +150,7 @@ Special Requests: ${result.specialRequests || 'None'}`;
                                     <div
                                         className={cn(
                                             "max-w-[80%] rounded-2xl px-4 py-3 text-[15px] leading-relaxed",
-                                            message.role === "user"
+                                            (message.role as string) === "user"
                                                 ? "gradient-gold text-white shadow-md"
                                                 : "glass bg-[var(--surface)] shadow-sm border border-[var(--border)]"
                                         )}
@@ -160,12 +160,12 @@ Special Requests: ${result.specialRequests || 'None'}`;
                                             // Exclude searchKnowledge - we want AI text for knowledge queries
                                             const hasDisplayableToolResult = message.parts.some(p => {
                                                 // Check old format (tool-invocation)
-                                                if (p.type === 'tool-invocation' && 'result' in p.toolInvocation) {
-                                                    const toolName = p.toolInvocation.toolName;
+                                                if ((p.type as string) === 'tool-invocation' && 'result' in (p as any).toolInvocation) {
+                                                    const toolName = (p as any).toolInvocation.toolName;
                                                     // Never hide text for searchKnowledge - let AI synthesize response
                                                     if (toolName === 'searchKnowledge') return false;
 
-                                                    const result = p.toolInvocation.result as any;
+                                                    const result = (p as any).toolInvocation.result;
                                                     // Don't hide if needsPreferences with no rooms (show preference questions)
                                                     if (result?.needsPreferences === true && result?.rooms?.length === 0) {
                                                         return false;
@@ -178,9 +178,9 @@ Special Requests: ${result.specialRequests || 'None'}`;
                                                     return false;
                                                 }
                                                 // Check new SDK v6 format (tool-searchRooms, etc.)
-                                                if (p.type.startsWith('tool-')) {
+                                                if ((p.type as string).startsWith('tool-')) {
                                                     const toolPart = p as any;
-                                                    const toolName = p.type.replace('tool-', '');
+                                                    const toolName = (p.type as string).replace('tool-', '');
                                                     // Never hide text for searchKnowledge
                                                     if (toolName === 'searchKnowledge') return false;
 
@@ -199,7 +199,7 @@ Special Requests: ${result.specialRequests || 'None'}`;
                                                 return false;
                                             });
 
-                                            if (part.type === 'text') {
+                                            if ((part.type as string) === 'text') {
                                                 // Show text if no displayable tool results
                                                 if (hasDisplayableToolResult) return null;
 
@@ -263,24 +263,25 @@ Special Requests: ${result.specialRequests || 'None'}`;
                                                 );
                                             }
                                             // Handle tool-invocation (old format)
-                                            if (part.type === 'tool-invocation') {
+                                            if ((part.type as string) === 'tool-invocation') {
+                                                const invocation = (part as any).toolInvocation;
                                                 return (
                                                     <div key={idx} className="mt-3 first:mt-0">
                                                         <ToolResult
-                                                            toolName={part.toolInvocation.toolName}
-                                                            state={part.toolInvocation.state}
-                                                            args={part.toolInvocation.args}
-                                                            result={'result' in part.toolInvocation ? part.toolInvocation.result : undefined}
-                                                            toolCallId={part.toolInvocation.toolCallId}
+                                                            toolName={invocation.toolName}
+                                                            state={invocation.state}
+                                                            args={invocation.args}
+                                                            result={'result' in invocation ? invocation.result : undefined}
+                                                            toolCallId={invocation.toolCallId}
                                                             onToolResult={handleToolResult}
                                                         />
                                                     </div>
                                                 );
                                             }
                                             // Handle tool-{toolName} format (AI SDK v6)
-                                            if (part.type.startsWith('tool-')) {
+                                            if ((part.type as string).startsWith('tool-')) {
                                                 const toolPart = part as any;
-                                                const toolName = part.type.replace('tool-', '');
+                                                const toolName = (part.type as string).replace('tool-', '');
                                                 return (
                                                     <div key={idx} className="mt-3 first:mt-0">
                                                         <ToolResult
@@ -299,7 +300,7 @@ Special Requests: ${result.specialRequests || 'None'}`;
                                     </div>
 
                                     {/* User Avatar */}
-                                    {message.role === "user" && (
+                                    {(message.role as string) === "user" && (
                                         <div className="flex-shrink-0 w-9 h-9 rounded-full bg-[var(--surface-dim)] flex items-center justify-center shadow-sm border border-[var(--border)]">
                                             <span className="text-sm font-medium text-[var(--foreground)]">You</span>
                                         </div>
@@ -309,7 +310,7 @@ Special Requests: ${result.specialRequests || 'None'}`;
                         })}
 
                         {/* Loading Indicator */}
-                        {isLoading && messages[messages.length - 1]?.role === "user" && (
+                        {isLoading && (messages[messages.length - 1]?.role as string) === "user" && (
                             <motion.div
                                 initial={{ opacity: 0, y: 12 }}
                                 animate={{ opacity: 1, y: 0 }}
@@ -387,5 +388,26 @@ Special Requests: ${result.specialRequests || 'None'}`;
                 </div>
             </div >
         </div >
+    );
+}
+
+// Suspense boundary required by Next.js 16 for useSearchParams()
+export default function ChatInterface() {
+    return (
+        <Suspense fallback={
+            <div className="flex items-center justify-center h-screen bg-[var(--background)]">
+                <div className="flex gap-2">
+                    {[0, 1, 2].map((i) => (
+                        <div
+                            key={i}
+                            className="w-3 h-3 rounded-full bg-[var(--gold)] animate-pulse"
+                            style={{ animationDelay: `${i * 0.15}s` }}
+                        />
+                    ))}
+                </div>
+            </div>
+        }>
+            <ChatInterfaceContent />
+        </Suspense>
     );
 }

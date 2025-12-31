@@ -22,6 +22,7 @@ import {
     escalationTools,
     allTools
 } from '../tools/langchain-tools';
+// @ts-ignore - langchain/agents may not have type declarations but exports are valid at runtime
 import { AgentExecutor, createToolCallingAgent } from 'langchain/agents';
 import { ChatPromptTemplate } from '@langchain/core/prompts';
 
@@ -408,7 +409,7 @@ export function createAgentGraph() {
     });
 
     // Each agent can loop back or end
-    const agentNodes = ['booking_agent', 'faq_agent', 'customer_service_agent', 'greeting_agent'];
+    const agentNodes = ['booking_agent', 'faq_agent', 'customer_service_agent', 'greeting_agent'] as const;
     agentNodes.forEach((node) => {
         workflow.addConditionalEdges(node, shouldContinue, {
             classifier: 'classifier',

@@ -119,21 +119,6 @@ export async function POST(req: Request) {
             tools: agentConfig.tools,
             toolChoice: 'auto',
             temperature: 0.7,
-            onChunk: ({ chunk }) => {
-                // Log each chunk for debugging
-                if (chunk.type === 'text-delta' && chunk.textDelta) {
-                    process.stdout.write(chunk.textDelta);
-                }
-            },
-            onFinish: async ({ text, toolCalls, finishReason, usage }) => {
-                console.log('\n========== AI RESPONSE COMPLETE ==========');
-                console.log(`AI Response [${intent}]:`, {
-                    textLength: text.length,
-                    textPreview: text.substring(0, 100) + '...',
-                    toolCallsCount: toolCalls?.length || 0,
-                    finishReason,
-                });
-            },
         });
 
         return result.toUIMessageStreamResponse();

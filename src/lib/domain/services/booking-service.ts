@@ -77,6 +77,10 @@ export class BookingService {
         return this.bookingRepository.findByConfirmationNumber(confirmationNumber);
     }
 
+    async getGuestBookings(guestEmail: string): Promise<Booking[]> {
+        return this.bookingRepository.findByGuestEmail(guestEmail);
+    }
+
     async cancelBooking(confirmationNumber: string): Promise<{
         booking: Booking;
         cancellationFee: number;

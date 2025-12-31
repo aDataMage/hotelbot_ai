@@ -85,7 +85,7 @@ async function runScopeTests() {
         } catch (error: any) {
             console.log(`❌ ERROR: ${error.message}`);
             failed++;
-            results.push({ ...scenario, status: 'ERROR', error: error.message });
+            results.push({ ...scenario, status: 'ERROR', responsePreview: '', error: error.message });
         }
     }
 

@@ -89,7 +89,8 @@ async function runTests() {
                 status,
                 duration,
                 responseLength: combinedText.length,
-                rawResponsePreview: combinedText.substring(0, 100).replace(/\n/g, ' ')
+                rawResponsePreview: combinedText.substring(0, 100).replace(/\n/g, ' '),
+                error: ''
             });
 
             // Rate limiting prevention
@@ -101,6 +102,9 @@ async function runTests() {
             results.push({
                 ...scenario,
                 status: 'ERROR',
+                duration: 0,
+                responseLength: 0,
+                rawResponsePreview: '',
                 error: error.message
             });
         }
