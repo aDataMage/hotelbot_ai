@@ -3,10 +3,12 @@
 import Link from "next/link";
 import { Sparkles, Menu, X } from "lucide-react";
 import { useState } from "react";
+import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
 export function Navbar() {
+    const { data: session } = authClient.useSession();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
 
     return (
@@ -22,7 +24,7 @@ export function Navbar() {
 
                 {/* Desktop Nav */}
                 <nav className="hidden md:flex items-center gap-8 text-sm font-medium">
-                    <Link href="#rooms" className="text-muted-foreground hover:text-foreground transition-colors">
+                    <Link href="/booking" className="text-muted-foreground hover:text-foreground transition-colors">
                         Rooms
                     </Link>
                     <Link href="/dining" className="text-muted-foreground hover:text-foreground transition-colors">
@@ -38,9 +40,15 @@ export function Navbar() {
 
                 {/* Desktop Actions */}
                 <div className="hidden md:flex items-center gap-4">
-                    <Button variant="ghost" asChild>
-                        <Link href="/chat">Sign In</Link>
-                    </Button>
+                    {session ? (
+                        <Button variant="ghost" asChild>
+                            <Link href="/dashboard">Dashboard</Link>
+                        </Button>
+                    ) : (
+                        <Button variant="ghost" asChild>
+                            <Link href="/auth">Sign In</Link>
+                        </Button>
+                    )}
                     <Button className="gradient-gold text-white shadow-md hover:shadow-lg transition-all" asChild>
                         <Link href="/chat">Book Now</Link>
                     </Button>
@@ -71,6 +79,15 @@ export function Navbar() {
                         <Link href="/location" className="text-sm font-medium p-2 hover:bg-muted rounded-md" onClick={() => setIsMenuOpen(false)}>
                             Location
                         </Link>
+                        {session ? (
+                            <Link href="/dashboard" className="text-sm font-medium p-2 hover:bg-muted rounded-md" onClick={() => setIsMenuOpen(false)}>
+                                Dashboard
+                            </Link>
+                        ) : (
+                            <Link href="/auth" className="text-sm font-medium p-2 hover:bg-muted rounded-md" onClick={() => setIsMenuOpen(false)}>
+                                Sign In
+                            </Link>
+                        )}
                         <Button className="w-full gradient-gold" asChild>
                             <Link href="/chat">Book Now</Link>
                         </Button>
