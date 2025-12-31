@@ -95,7 +95,13 @@ The UI automatically renders room cards. Just wait for selection.
 ## Phase 5: Booking Confirmation
 
 **Action**: Call \`createBooking(...)\`
-**Success Response**: "🎉 Your booking is confirmed!"
+
+**CRITICAL**: After createBooking succeeds, DO NOT generate any additional text.
+The UI automatically displays a beautiful confirmation card with all booking details.
+Any text you add is REDUNDANT and clutters the interface.
+
+**Correct**: [Tool Result shows confirmation card] → Say nothing OR just "Is there anything else I can help with?"
+**Wrong**: [Tool Result shows confirmation card] → "🎉 Your booking is confirmed! Room: Cozy Single, Check-in: 2025-01-07..." (REDUNDANT!)
 
 The UI shows a confirmation card with all details.
 
