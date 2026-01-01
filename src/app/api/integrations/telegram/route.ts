@@ -5,22 +5,57 @@ import { generateText, stepCountIs } from 'ai';
 
 const TELEGRAM_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 
+/**
+ * Convert markdown to Telegram-compatible format.
+ * Telegram supports: *bold*, _italic_, `code`, [link](url)
+ * But doesn't support: headers, bullet points, etc.
+ */
+function formatForTelegram(text: string): string {
+    return text
+        // Convert **bold** to *bold* (Telegram style)
+        .replace(/\*\*(.+?)\*\*/g, '*$1*')
+        // Convert headers to bold
+        .replace(/^#+\s*(.+)$/gm, '*$1*')
+        // Convert bullet points to emoji
+        .replace(/^[-*]\s+/gm, '• ')
+        // Convert numbered lists
+        .replace(/^\d+\.\s+/gm, '• ')
+        // Remove excessive newlines
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+}
+
 async function sendTelegramMessage(chatId: string | number, text: string) {
     if (!TELEGRAM_TOKEN) {
         console.error('TELEGRAM_BOT_TOKEN not set');
         return;
     }
+
+    const formattedText = formatForTelegram(text);
     const url = `https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`;
+
     try {
-        await fetch(url, {
+        const response = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 chat_id: chatId,
-                text: text,
+                text: formattedText,
                 parse_mode: 'Markdown'
             })
         });
+
+        // If Markdown parsing fails, retry without it
+        if (!response.ok) {
+            await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    chat_id: chatId,
+                    text: text.replace(/[*_`\[\]]/g, '') // Strip markdown
+                })
+            });
+        }
     } catch (e) {
         console.error('Failed to send Telegram message', e);
     }
@@ -30,22 +65,18 @@ export async function POST(req: Request) {
     try {
         const update = await req.json();
 
-        // Basic validation of update structure
         if (!update.message || !update.message.text) {
-            return Response.json({ ok: true }); // Acknowledge to stop retries
+            return Response.json({ ok: true });
         }
 
         const chatId = String(update.message.chat.id);
         const userText = update.message.text;
 
-        // 1. Get History
         const history = await IntegratedChatRepository.getHistory('telegram', chatId);
 
-        // 2. Prepare Messages
         const incomingMessage: any = { role: 'user', content: userText };
         const conversation = [...history, incomingMessage];
 
-        // 3. Process with Orchestrator
         const {
             isValid,
             validationError,
@@ -58,7 +89,6 @@ export async function POST(req: Request) {
             return Response.json({ ok: true });
         }
 
-        // 4. Generate Response (Non-streaming)
         const result = await generateText({
             model: openai('gpt-4o'),
             messages: modelMessages,
@@ -70,11 +100,9 @@ export async function POST(req: Request) {
 
         const aiText = result.text;
 
-        // 5. Update History
         const messagesToSave = [incomingMessage, ...result.response.messages];
         await IntegratedChatRepository.appendToHistory('telegram', chatId, messagesToSave);
 
-        // 6. Send Response
         await sendTelegramMessage(chatId, aiText);
 
         return Response.json({ ok: true });
