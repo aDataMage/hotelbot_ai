@@ -108,6 +108,12 @@ export async function searchKnowledgeBase(params: {
 
     } catch (error) {
         console.error('❌ Error searching knowledge base:', error);
+        if ((error as any).data) {
+            console.error('Qdrant Error Data:', JSON.stringify((error as any).data, null, 2));
+        }
+        if ((error as any).response) {
+            console.error('Qdrant Error Response:', JSON.stringify((error as any).response?.data || (error as any).response, null, 2));
+        }
         return { error: 'Failed to search knowledge base' };
     }
 }

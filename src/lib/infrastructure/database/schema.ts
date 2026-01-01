@@ -241,6 +241,20 @@ export const nearbySpots = pgTable('nearby_spots', {
 }));
 
 // -----------------------------------------------------------------------------
+// Integrated Chats Table (Telegram/WhatsApp Persistence)
+// -----------------------------------------------------------------------------
+export const integratedChats = pgTable('integrated_chats', {
+    id: varchar('id', { length: 128 }).primaryKey().$defaultFn(() => createId()),
+    platform: varchar('platform', { length: 20 }).notNull(), // telegram, whatsapp
+    externalUserId: varchar('external_user_id', { length: 255 }).notNull(),
+    history: jsonb('history').notNull().$type<any[]>().default([]), // Store generic array, validated at runtime
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+    externalUserIdx: uniqueIndex('external_user_idx').on(table.platform, table.externalUserId),
+}));
+
+// -----------------------------------------------------------------------------
 // Auth Tables (Better Auth)
 // -----------------------------------------------------------------------------
 
@@ -341,3 +355,6 @@ export type NewPolicy = typeof policies.$inferInsert;
 
 export type NearbySpot = typeof nearbySpots.$inferSelect;
 export type NewNearbySpot = typeof nearbySpots.$inferInsert;
+
+export type IntegratedChat = typeof integratedChats.$inferSelect;
+export type NewIntegratedChat = typeof integratedChats.$inferInsert;
