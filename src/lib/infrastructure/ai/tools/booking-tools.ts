@@ -185,3 +185,100 @@ export async function getBookingDetails(confirmationNumber: string) {
         return { error: 'Failed to get booking details' };
     }
 }
+
+/**
+ * Get all bookings for the authenticated user
+ */
+export async function getMyBookings(userEmail: string) {
+    try {
+        if (!userEmail) {
+            return { error: 'You must be logged in to view your bookings' };
+        }
+
+        console.log('📋 getMyBookings called for:', userEmail);
+
+        const bookingService = getBookingService();
+        const roomService = getRoomService();
+
+        const bookings = await bookingService.getGuestBookings(userEmail);
+
+        if (bookings.length === 0) {
+            return {
+                message: 'You have no bookings yet.',
+                bookings: []
+            };
+        }
+
+        const bookingsWithDetails = await Promise.all(
+            bookings.map(async (booking) => {
+                const room = await roomService.getRoomById(booking.roomId);
+                return {
+                    confirmationNumber: booking.confirmationNumber,
+                    status: booking.status,
+                    roomName: room?.name,
+                    roomNumber: room?.roomNumber,
+                    checkIn: booking.checkInDate.toISOString().split('T')[0],
+                    checkOut: booking.checkOutDate.toISOString().split('T')[0],
+                    nights: booking.numberOfNights,
+                    guests: booking.numberOfGuests,
+                    totalAmount: booking.totalAmount,
+                };
+            })
+        );
+
+        return {
+            bookings: bookingsWithDetails,
+            count: bookingsWithDetails.length,
+            message: `You have ${bookingsWithDetails.length} booking(s).`
+        };
+    } catch (error) {
+        console.error('Error getting user bookings:', error);
+        return { error: 'Failed to retrieve your bookings' };
+    }
+}
+
+/**
+ * Cancel a booking if it belongs to the authenticated user
+ */
+export async function cancelMyBooking(confirmationNumber: string, userEmail: string) {
+    try {
+        if (!userEmail) {
+            return { error: 'You must be logged in to cancel bookings' };
+        }
+
+        console.log('❌ cancelMyBooking called:', { confirmationNumber, userEmail });
+
+        const bookingService = getBookingService();
+
+        // First verify the booking belongs to this user
+        const booking = await bookingService.getBookingByConfirmationNumber(confirmationNumber);
+
+        if (!booking) {
+            return { error: 'Booking not found' };
+        }
+
+        if (booking.guestEmail.toLowerCase() !== userEmail.toLowerCase()) {
+            return { error: 'You can only cancel your own bookings' };
+        }
+
+        if (!booking.canBeCancelled()) {
+            return {
+                error: 'This booking cannot be cancelled',
+                reason: booking.status === 'cancelled' ? 'Already cancelled' : 'Check-in has passed'
+            };
+        }
+
+        const result = await bookingService.cancelBooking(confirmationNumber);
+
+        return {
+            success: true,
+            confirmationNumber: result.booking.confirmationNumber,
+            cancellationFee: result.cancellationFee,
+            refundAmount: result.refundAmount,
+            message: `Booking ${confirmationNumber} has been cancelled. Refund amount: $${result.refundAmount.toFixed(2)}`
+        };
+    } catch (error) {
+        console.error('Error cancelling booking:', error);
+        return { error: error instanceof Error ? error.message : 'Failed to cancel booking' };
+    }
+}

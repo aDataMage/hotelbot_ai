@@ -71,6 +71,35 @@ graph TD
 *   **Vector Search:** `Qdrant` (for high-performance RAG)
 *   **Architecture:** Clean Architecture (Domain / Use Cases / Infrastructure separation)
 
+## 📱 Messaging Integrations
+
+HotelBot supports direct integration with **Telegram** and **WhatsApp**, allowing guests to interact with the AI concierge from their preferred messaging platform.
+
+### Required Environment Variables
+
+Add these to your `.env.local` (local) or Vercel Environment Variables (production):
+
+| Variable | Description |
+| :--- | :--- |
+| `TELEGRAM_BOT_TOKEN` | Bot token from [@BotFather](https://t.me/botfather) |
+| `TWILIO_ACCOUNT_SID` | Your Twilio Account SID |
+| `TWILIO_AUTH_TOKEN` | Your Twilio Auth Token |
+| `TWILIO_WHATSAPP_NUMBER` | Your Twilio WhatsApp number (e.g., `whatsapp:+14155238886`) |
+
+### Webhook Setup
+
+**Telegram:**
+```bash
+curl -F "url=https://hotelbot-seven.vercel.app/api/integrations/telegram" \
+     https://api.telegram.org/bot<YOUR_TOKEN>/setWebhook
+```
+
+**WhatsApp (Twilio):**
+1. Go to [Twilio Console](https://console.twilio.com) → Messaging → WhatsApp Sandbox
+2. Set the webhook URL to: `https://hotelbot-seven.vercel.app/api/integrations/whatsapp`
+
+---
+
 ## 📬 Contact Me
 
 I specialize in building high-impact, AI-driven applications that solve real business problems. Let's connect!

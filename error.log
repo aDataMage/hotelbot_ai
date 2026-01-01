@@ -1,0 +1,10 @@
+
+> hotelbot@0.1.0 type-check D:\Projects\hotel-bot\hotelbot
+> tsc --noEmit
+
+src/app/api/integrations/telegram/route.ts(4,24): error TS2305: Module '"ai"' has no exported member 'CoreMessage'.
+src/app/api/integrations/telegram/route.ts(70,13): error TS2353: Object literal may only specify known properties, and 'maxSteps' does not exist in type 'CallSettings & { system?: string | SystemModelMessage | SystemModelMessage[] | undefined; } & { messages: ModelMessage[]; prompt?: undefined; } & { ...; }'.
+src/app/api/integrations/whatsapp/route.ts(4,24): error TS2305: Module '"ai"' has no exported member 'CoreMessage'.
+src/app/api/integrations/whatsapp/route.ts(46,13): error TS2353: Object literal may only specify known properties, and 'maxSteps' does not exist in type 'CallSettings & { system?: string | SystemModelMessage | SystemModelMessage[] | undefined; } & { messages: ModelMessage[]; prompt?: undefined; } & { ...; }'.
+src/lib/infrastructure/ai/chat-orchestrator.ts(1,10): error TS2305: Module '"ai"' has no exported member 'CoreMessage'.
+ ELIFECYCLE  Command failed with exit code 2.

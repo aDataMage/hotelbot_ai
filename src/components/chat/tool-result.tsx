@@ -7,7 +7,7 @@
 import { RoomCard } from "./room-card";
 import { BookingCard } from "./booking-card";
 import { GuestDetailsForm } from "./guest-details-form";
-import { Info, AlertTriangle, Search, MessageSquare } from "lucide-react";
+import { Info, AlertTriangle, Search, MessageSquare, Calendar, XCircle, CheckCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ToolResultProps {
@@ -130,11 +130,141 @@ export function ToolResult({ toolName, state, args, result, toolCallId, onToolRe
         }
 
         case 'requestGuestDetails': {
+            const data = result as { roomId?: string; prefill?: { guestName?: string; guestEmail?: string } };
             return (
                 <GuestDetailsForm
-                    roomId={args?.roomId as string}
-                    onSubmit={(data) => onToolResult?.(toolCallId || 'unknown', data)}
+                    roomId={(args?.roomId as string) || data?.roomId || ''}
+                    prefill={data?.prefill}
+                    onSubmit={(formData) => onToolResult?.(toolCallId || 'unknown', formData)}
                 />
+            );
+        }
+
+        case 'getMyBookings': {
+            const data = result as { bookings?: any[]; count?: number; message?: string; error?: string };
+
+            if (data?.error) {
+                return <ErrorCard message={data.error} />;
+            }
+
+            if (!data?.bookings || data.bookings.length === 0) {
+                return <InfoCard message={data?.message || "You have no bookings."} />;
+            }
+
+            return (
+                <div className="space-y-3">
+                    <p className="text-sm text-[var(--muted)]">
+                        {data.message || `You have ${data.count} booking(s)`}
+                    </p>
+                    <div className="space-y-2">
+                        {data.bookings.map((booking: any) => (
+                            <div
+                                key={booking.confirmationNumber}
+                                className={cn(
+                                    "w-full max-w-md rounded-xl overflow-hidden",
+                                    "bg-[var(--surface)] border border-[var(--border)]",
+                                    "shadow-sm p-4"
+                                )}
+                            >
+                                <div className="flex items-start justify-between gap-3">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-full bg-[var(--gold)]/10 flex items-center justify-center">
+                                            <Calendar className="w-5 h-5 text-[var(--gold)]" />
+                                        </div>
+                                        <div>
+                                            <h4 className="text-sm font-semibold">{booking.roomName}</h4>
+                                            <p className="text-xs text-[var(--muted)]">Room #{booking.roomNumber}</p>
+                                        </div>
+                                    </div>
+                                    <span className={cn(
+                                        "px-2 py-1 text-xs font-medium rounded-full",
+                                        booking.status === 'confirmed' && "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
+                                        booking.status === 'checked_in' && "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+                                        booking.status === 'cancelled' && "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
+                                        booking.status === 'pending' && "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
+                                    )}>
+                                        {booking.status}
+                                    </span>
+                                </div>
+                                <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                                    <div>
+                                        <p className="text-[var(--muted)]">Check-in</p>
+                                        <p className="font-medium">{booking.checkIn}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[var(--muted)]">Check-out</p>
+                                        <p className="font-medium">{booking.checkOut}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[var(--muted)]">Confirmation</p>
+                                        <p className="font-mono font-medium text-[var(--gold)]">{booking.confirmationNumber}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[var(--muted)]">Total</p>
+                                        <p className="font-semibold">${booking.totalAmount?.toFixed(2)}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        }
+
+        case 'cancelMyBooking': {
+            const data = result as {
+                success?: boolean;
+                confirmationNumber?: string;
+                refundAmount?: number;
+                cancellationFee?: number;
+                message?: string;
+                error?: string
+            };
+
+            if (data?.error) {
+                return (
+                    <div className={cn(
+                        "w-full max-w-md rounded-xl overflow-hidden",
+                        "bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800/50",
+                        "shadow-sm p-4"
+                    )}>
+                        <div className="flex items-start gap-3">
+                            <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/50 flex items-center justify-center">
+                                <XCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
+                            </div>
+                            <div>
+                                <h4 className="text-sm font-semibold text-red-700 dark:text-red-400">Cancellation Failed</h4>
+                                <p className="text-xs text-red-600/80 dark:text-red-400/80 mt-1">{data.error}</p>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className={cn(
+                    "w-full max-w-md rounded-xl overflow-hidden",
+                    "bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/50",
+                    "shadow-sm p-4"
+                )}>
+                    <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center">
+                            <CheckCircle className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                        </div>
+                        <div>
+                            <h4 className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">Booking Cancelled</h4>
+                            <p className="text-xs text-emerald-600/80 dark:text-emerald-400/80 mt-1">
+                                Confirmation: <span className="font-mono font-medium">{data.confirmationNumber}</span>
+                            </p>
+                            {data.refundAmount !== undefined && (
+                                <p className="text-xs text-emerald-600/80 dark:text-emerald-400/80 mt-1">
+                                    Refund: <span className="font-semibold">${data.refundAmount.toFixed(2)}</span>
+                                    {data.cancellationFee ? ` (Fee: $${data.cancellationFee.toFixed(2)})` : ''}
+                                </p>
+                            )}
+                        </div>
+                    </div>
+                </div>
             );
         }
 
