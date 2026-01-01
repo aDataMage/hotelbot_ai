@@ -1,10 +1,10 @@
 # HotelBot
 **Revolutionizing Hospitality with Multi-Agent AI**
 
-[![Live Demo](https://img.shields.io/badge/Demo-Live%20App-brightgreen?style=for-the-badge&logo=vercel)]([LIVE_DEMO_LINK])
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-blue?style=for-the-badge&logo=linkedin)]([LINKEDIN_LINK])
-[![Website](https://img.shields.io/badge/Portfolio-Visit-purple?style=for-the-badge)]([WEBSITE_LINK])
-[![Email](https://img.shields.io/badge/Email-Contact_Me-red?style=for-the-badge&logo=gmail)](mailto:[EMAIL_ADDRESS])
+[![Live Demo](https://img.shields.io/badge/Demo-Live%20App-brightgreen?style=for-the-badge&logo=vercel)](https://hotelbot-seven.vercel.app/)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-blue?style=for-the-badge&logo=linkedin)](https://www.linkedin.com/in/adatamage/)
+[![Website](https://img.shields.io/badge/Portfolio-Visit-purple?style=for-the-badge)](https://adatamage.com/)
+[![Email](https://img.shields.io/badge/Email-Contact_Me-red?style=for-the-badge&logo=gmail)](mailto:adejorieniola@adatamage.com)
 
 ---
 
@@ -71,53 +71,13 @@ graph TD
 *   **Vector Search:** `Qdrant` (for high-performance RAG)
 *   **Architecture:** Clean Architecture (Domain / Use Cases / Infrastructure separation)
 
----
-
-## 🚀 Getting Started
-
-Want to see the code in action? Here is how to run the project locally.
-
-### Prerequisites
-*   Node.js 20+ & pnpm
-*   Docker (optional)
-*   API Keys: OpenAI, Google AI, Neon (Postgres), Qdrant
-
-### Installation
-
-1.  **Clone the repository**
-    ```bash
-    git clone https://github.com/aDataMage/hotelbot.git
-    cd hotelbot
-    pnpm install
-    ```
-
-2.  **Configure Environment**
-    ```bash
-    cp .env.example .env.local
-    # Fill in your API keys in .env.local
-    ```
-
-3.  **Initialize Data**
-    ```bash
-    pnpm db:push        # Push schema to Postgres
-    pnpm db:seed        # Seed mock hotel data
-    pnpm embed:knowledge # Vectorize hotel policies
-    ```
-
-4.  **Run Development Server**
-    ```bash
-    pnpm dev
-    ```
-
----
-
 ## 📬 Contact Me
 
 I specialize in building high-impact, AI-driven applications that solve real business problems. Let's connect!
 
-*   **LinkedIn:** [Your Name]([LINKEDIN_LINK])
-*   **Portfolio:** [your-website.com]([WEBSITE_LINK])
-*   **Email:** [your-email@example.com](mailto:[EMAIL_ADDRESS])
+*   **LinkedIn:** [Adejori Eniola](https://www.linkedin.com/in/adatamage/)
+*   **Portfolio:** [adatamage](https://adatamage.com/)
+*   **Email:** [adejorieniola@adatamage.com](mailto:adejorieniola@adatamage.com)
 
 ---
-*Built by [Your Name].*
+*Built by adatamage.*
