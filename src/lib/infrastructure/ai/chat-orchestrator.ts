@@ -2,6 +2,13 @@ import { convertToModelMessages } from 'ai';
 import { quickClassifyIntent, classifyIntent, Intent } from '@/lib/infrastructure/ai/agents/intent-classifier';
 import { getAgentConfig } from '@/lib/infrastructure/ai/agents/agent-configs';
 
+export type UserContext = {
+    id: string;
+    email: string;
+    name?: string;
+    isAuthenticated: boolean;
+};
+
 export type ChatProcessingResult = {
     isValid: boolean;
     validationError?: string;
@@ -46,7 +53,8 @@ export class ChatOrchestrator {
      */
     static async processMessage(
         messages: any[], // UI messages or generic array
-        lastUserTextOverride?: string // Optional override if messages are complex
+        lastUserTextOverride?: string, // Optional override if messages are complex
+        userContext?: UserContext // Optional authenticated user context
     ): Promise<ChatProcessingResult> {
         // 1. Extract and Validate User Text
         const lastMessage = messages[messages.length - 1];
@@ -137,8 +145,8 @@ export class ChatOrchestrator {
 
         console.log(`🎯 ChatOrchestrator: Classified INTENT: ${intent}`);
 
-        // 5. Get Config
-        const agentConfig = getAgentConfig(intent);
+        // 5. Get Config (with user context for personalized tools)
+        const agentConfig = getAgentConfig(intent, userContext);
 
         return {
             isValid: true,

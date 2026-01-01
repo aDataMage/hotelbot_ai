@@ -7,9 +7,10 @@
 import { tool } from 'ai';
 import { z } from 'zod';
 import { searchKnowledgeBase } from '../tools/knowledge-tools';
-import { createBooking } from '../tools/booking-tools';
+import { createBooking, getMyBookings, cancelMyBooking } from '../tools/booking-tools';
 import { getRoomService } from '../../di/container';
 import { getPrompt } from '../prompts';
+import type { UserContext } from '../chat-orchestrator';
 
 // ============================================================================
 // BOOKING AGENT TOOLS
@@ -256,26 +257,78 @@ export const serviceTools = {
 
 export type Intent = 'booking' | 'knowledge' | 'service' | 'general';
 
-export function getAgentConfig(intent: Intent) {
+/**
+ * Create personalized booking tools that include user context
+ */
+function createPersonalizedTools(userContext?: UserContext) {
+    const userEmail = userContext?.email || '';
+    const userName = userContext?.name || '';
+    const isAuthenticated = userContext?.isAuthenticated || false;
+
+    return {
+        getMyBookings: tool({
+            description: 'Get all bookings for the currently logged-in user. Use when user asks to see their reservations.',
+            inputSchema: z.object({}),
+            execute: async () => {
+                if (!isAuthenticated) {
+                    return { error: 'Please log in to view your bookings', requiresAuth: true };
+                }
+                return await getMyBookings(userEmail);
+            }
+        }),
+        cancelMyBooking: tool({
+            description: 'Cancel a booking for the logged-in user. Requires confirmation number.',
+            inputSchema: z.object({
+                confirmationNumber: z.string().describe('The booking confirmation number to cancel')
+            }),
+            execute: async ({ confirmationNumber }) => {
+                if (!isAuthenticated) {
+                    return { error: 'Please log in to cancel bookings', requiresAuth: true };
+                }
+                return await cancelMyBooking(confirmationNumber, userEmail);
+            }
+        }),
+        // Personalized version of requestGuestDetails with prefilled user info
+        requestGuestDetails: tool({
+            description: 'Show form to collect guest details for booking. If user is logged in, their info is prefilled.',
+            inputSchema: z.object({ roomId: z.string() }),
+            execute: async ({ roomId }) => ({
+                roomId,
+                status: 'waiting_for_input',
+                prefill: isAuthenticated ? {
+                    guestName: userName,
+                    guestEmail: userEmail
+                } : undefined
+            }),
+        }),
+    };
+}
+
+export function getAgentConfig(intent: Intent, userContext?: UserContext) {
+    // Create personalized tools if user is authenticated
+    const personalizedTools = createPersonalizedTools(userContext);
+    const authStatus = userContext?.isAuthenticated
+        ? `The user is logged in as ${userContext.name || userContext.email}. You can help them view or cancel their bookings.`
+        : 'The user is not logged in. If they want to view or cancel bookings, ask them to log in first.';
+
     const configs = {
         booking: {
-            tools: { ...bookingTools, endChat: serviceTools.endChat },
-            systemPrompt: getPrompt('booking'),
+            tools: { ...bookingTools, ...personalizedTools, endChat: serviceTools.endChat },
+            systemPrompt: getPrompt('booking') + `\n\n[AUTH STATUS]\n${authStatus}`,
         },
         knowledge: {
             tools: knowledgeTools,
             systemPrompt: getPrompt('knowledge'),
         },
         service: {
-            tools: serviceTools,
-            systemPrompt: getPrompt('service'),
+            tools: { ...serviceTools, ...personalizedTools },
+            systemPrompt: getPrompt('service') + `\n\n[AUTH STATUS]\n${authStatus}`,
         },
         general: {
-            tools: { ...bookingTools, ...knowledgeTools, ...serviceTools },
-            systemPrompt: getPrompt('general'),
+            tools: { ...bookingTools, ...knowledgeTools, ...serviceTools, ...personalizedTools },
+            systemPrompt: getPrompt('general') + `\n\n[AUTH STATUS]\n${authStatus}`,
         },
     };
 
     return configs[intent];
 }
-

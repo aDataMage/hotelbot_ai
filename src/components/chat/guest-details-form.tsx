@@ -7,12 +7,16 @@ import { cn } from "@/lib/utils";
 interface GuestDetailsFormProps {
     roomId: string;
     onSubmit: (data: any) => void;
+    prefill?: {
+        guestName?: string;
+        guestEmail?: string;
+    };
 }
 
-export function GuestDetailsForm({ roomId, onSubmit }: GuestDetailsFormProps) {
+export function GuestDetailsForm({ roomId, onSubmit, prefill }: GuestDetailsFormProps) {
     const [formData, setFormData] = useState({
-        guestName: "",
-        guestEmail: "",
+        guestName: prefill?.guestName || "",
+        guestEmail: prefill?.guestEmail || "",
         guestPhone: "",
         specialRequests: ""
     });

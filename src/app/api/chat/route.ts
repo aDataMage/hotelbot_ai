@@ -5,14 +5,37 @@
  * Routes user messages to specialized agents based on intent classification.
  * 
  * REFACTORED: Uses ChatOrchestrator for shared logic.
+ * AUTH: Passes user session to enable personalized actions.
  */
 import { streamText, stepCountIs } from 'ai';
 import { openai } from '@ai-sdk/openai';
-import { ChatOrchestrator } from '@/lib/infrastructure/ai/chat-orchestrator';
+import { ChatOrchestrator, UserContext } from '@/lib/infrastructure/ai/chat-orchestrator';
+import { auth } from '@/lib/auth';
+import { headers } from 'next/headers';
 
 export async function POST(req: Request) {
     try {
         const { messages } = await req.json();
+
+        // Extract auth session for personalized actions
+        let userContext: UserContext | undefined;
+        try {
+            const session = await auth.api.getSession({
+                headers: await headers()
+            });
+            if (session?.user) {
+                userContext = {
+                    id: session.user.id,
+                    email: session.user.email,
+                    name: session.user.name || undefined,
+                    isAuthenticated: true
+                };
+                console.log('🔐 Chat API: Authenticated user:', userContext.email);
+            }
+        } catch (authError) {
+            // User is not authenticated - continue as guest
+            console.log('👤 Chat API: Guest user (no session)');
+        }
 
         // Use Chat Orchestrator for validation, intent, and config
         const {
@@ -21,7 +44,7 @@ export async function POST(req: Request) {
             modelMessages,
             agentConfig,
             classifiedIntent
-        } = await ChatOrchestrator.processMessage(messages);
+        } = await ChatOrchestrator.processMessage(messages, undefined, userContext);
 
         if (!isValid) {
             return Response.json(
@@ -37,7 +60,7 @@ export async function POST(req: Request) {
             messages: modelMessages,
             system: agentConfig.systemPrompt,
             tools: agentConfig.tools,
-            toolChoice: 'auto', // Now handled by orchestrator config if we wanted, but explicit here is fine
+            toolChoice: 'auto',
             temperature: 0.7,
         });
 

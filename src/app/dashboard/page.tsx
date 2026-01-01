@@ -5,17 +5,19 @@ import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import { db } from "@/lib/infrastructure/database/drizzle";
 import { bookings } from "@/lib/infrastructure/database/schema";
-import { eq, desc } from "drizzle-orm";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { LogOut, Calendar, User, CreditCard } from "lucide-react";
-import SignOutButton from "@/components/auth/sign-out-button"; // Will create this
+import { eq, desc, and, gte, sql } from "drizzle-orm";
+import { DashboardStats } from "@/components/dashboard/dashboard-stats";
+import { BookingActions } from "@/components/dashboard/booking-actions";
+import { QuickActions } from "@/components/dashboard/quick-actions";
+import { Calendar, User, Settings, LogOut, MessageSquare } from "lucide-react";
+import Link from "next/link";
+import SignOutButton from "@/components/auth/sign-out-button";
 
 export const dynamic = 'force-dynamic';
 
 export default async function DashboardPage() {
     const session = await auth.api.getSession({
-        headers: await headers() // await headers() is required in Next.js 15+ (and 16 apparently)
+        headers: await headers()
     });
 
     if (!session) {
@@ -24,111 +26,159 @@ export default async function DashboardPage() {
 
     const user = session.user;
 
-    // Fetch bookings for this user based on email matching
+    // Fetch all bookings for this user
     const userBookings = await db.query.bookings.findMany({
         where: eq(bookings.guestEmail, user.email),
         with: {
             room: true
         },
         orderBy: [desc(bookings.checkInDate)],
-        limit: 5
     });
 
+    // Calculate stats
+    const now = new Date();
+    const upcomingStays = userBookings.filter(
+        b => b.status === 'confirmed' && new Date(b.checkInDate) > now
+    ).length;
+
+    // Include both confirmed and completed bookings for total spent (exclude cancelled)
+    const activeBookings = userBookings.filter(
+        b => b.status === 'confirmed' || b.status === 'completed'
+    );
+    const totalSpent = activeBookings.reduce(
+        (sum, b) => sum + Number(b.totalAmount),
+        0
+    );
+    const totalNights = activeBookings.reduce(
+        (sum, b) => sum + Number(b.numberOfNights),
+        0
+    );
+
+    // Get recent bookings (limit to 10)
+    const recentBookings = userBookings.slice(0, 10);
+
     return (
-        <main className="min-h-screen flex flex-col bg-background pt-24">
+        <main className="min-h-screen flex flex-col bg-[var(--background)]">
             <Navbar />
-            <div className="flex-1 container mx-auto px-4 py-8">
-                <div className="flex justify-between items-center mb-8">
-                    <div>
-                        <h1 className="text-3xl font-bold">My Dashboard</h1>
-                        <p className="text-muted-foreground">Welcome back, {user.name}!</p>
+
+            <div className="flex-1 pt-20">
+                {/* Hero Section */}
+                <div className="bg-gradient-to-br from-[var(--surface)] to-[var(--surface-dim)] border-b border-[var(--border)]">
+                    <div className="max-w-7xl mx-auto px-4 md:px-6 py-12">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                            <div className="flex items-center gap-4">
+                                <div className="w-16 h-16 rounded-full gradient-gold flex items-center justify-center shadow-lg text-white text-2xl font-bold">
+                                    {user.name?.charAt(0).toUpperCase() || 'U'}
+                                </div>
+                                <div>
+                                    <h1 className="text-2xl md:text-3xl font-bold text-[var(--foreground)]">
+                                        Welcome back, {user.name?.split(' ')[0]}!
+                                    </h1>
+                                    <p className="text-[var(--muted)] text-sm md:text-base">
+                                        {user.email}
+                                    </p>
+                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-2 ${user.role === 'admin'
+                                        ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400'
+                                        : 'bg-[var(--gold)]/10 text-[var(--gold-dark)] dark:text-[var(--gold)]'
+                                        }`}>
+                                        {user.role === 'admin' ? '✨ Admin Access' : '⭐ Gold Member'}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-3">
+                                <Link
+                                    href="/chat"
+                                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl gradient-gold text-white font-medium text-sm shadow-md hover:shadow-lg transition-all"
+                                >
+                                    <MessageSquare className="w-4 h-4" />
+                                    Book a Stay
+                                </Link>
+                                <SignOutButton />
+                            </div>
+                        </div>
                     </div>
-                    <SignOutButton />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                    {/* User Profile Card */}
-                    <Card className="md:col-span-1 border-[var(--border)]">
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <User className="w-5 h-5 text-[var(--gold)]" />
-                                Profile
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div>
-                                <label className="text-xs text-muted-foreground uppercase tracking-wider">Name</label>
-                                <p className="font-medium">{user.name}</p>
-                            </div>
-                            <div>
-                                <label className="text-xs text-muted-foreground uppercase tracking-wider">Email</label>
-                                <p className="font-medium">{user.email}</p>
-                            </div>
-                            <div>
-                                <label className="text-xs text-muted-foreground uppercase tracking-wider">Member Since</label>
-                                <p className="font-medium">{new Date(user.createdAt).toLocaleDateString()}</p>
-                            </div>
-                            <div className="pt-4">
-                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${user.role === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-[var(--gold)]/10 text-[var(--gold-dark)]'}`}>
-                                    {user.role === 'admin' ? 'Admin Access' : 'Gold Member'}
-                                </span>
-                            </div>
-                        </CardContent>
-                    </Card>
+                <div className="max-w-7xl mx-auto px-4 md:px-6 py-8 space-y-8">
+                    {/* Stats Section */}
+                    <section>
+                        <DashboardStats
+                            upcomingStays={upcomingStays}
+                            totalSpent={totalSpent}
+                            totalNights={totalNights}
+                            memberSince={new Date(user.createdAt)}
+                        />
+                    </section>
 
-                    {/* Bookings */}
-                    <div className="md:col-span-2 space-y-6">
-                        <h2 className="text-2xl font-bold flex items-center gap-2">
-                            <Calendar className="w-6 h-6 text-[var(--gold)]" />
-                            Recent Bookings
+                    {/* Quick Actions */}
+                    <section>
+                        <h2 className="text-lg font-semibold text-[var(--foreground)] mb-4">
+                            Quick Actions
                         </h2>
+                        <QuickActions />
+                    </section>
 
-                        {userBookings.length > 0 ? (
+                    {/* Bookings Section */}
+                    <section>
+                        <div className="flex items-center justify-between mb-6">
+                            <h2 className="text-xl font-bold text-[var(--foreground)] flex items-center gap-2">
+                                <Calendar className="w-5 h-5 text-[var(--gold)]" />
+                                Your Reservations
+                            </h2>
+                            {userBookings.length > 10 && (
+                                <span className="text-sm text-[var(--muted)]">
+                                    Showing 10 of {userBookings.length}
+                                </span>
+                            )}
+                        </div>
+
+                        {recentBookings.length > 0 ? (
                             <div className="space-y-4">
-                                {userBookings.map(booking => (
-                                    <Card key={booking.id} className="overflow-hidden hover:shadow-md transition-shadow">
-                                        <div className="flex flex-col md:flex-row">
-                                            <div className="bg-[var(--surface-dim)] p-6 md:w-1/3 flex flex-col justify-center text-center md:text-left">
-                                                <p className="text-sm text-muted-foreground">Check-in</p>
-                                                <p className="text-lg font-bold">{new Date(booking.checkInDate).toLocaleDateString()}</p>
-                                                <div className="h-px bg-border my-2 w-full" />
-                                                <p className="text-sm text-muted-foreground">Check-out</p>
-                                                <p className="text-lg font-bold">{new Date(booking.checkOutDate).toLocaleDateString()}</p>
-                                            </div>
-                                            <div className="p-6 flex-1 space-y-2">
-                                                <div className="flex justify-between items-start">
-                                                    <div>
-                                                        <h3 className="font-bold text-lg">{booking.room?.name || "Room details unavailable"}</h3>
-                                                        <p className="text-sm text-muted-foreground">Conf: {booking.confirmationNumber}</p>
-                                                    </div>
-                                                    <span className={`px-2 py-1 rounded text-xs font-semibold capitalize ${booking.status === 'confirmed' ? 'bg-green-100 text-green-800' :
-                                                        booking.status === 'cancelled' ? 'bg-red-100 text-red-800' :
-                                                            'bg-yellow-100 text-yellow-800'
-                                                        }`}>
-                                                        {booking.status}
-                                                    </span>
-                                                </div>
-                                                <div className="flex justify-between items-center pt-2">
-                                                    <p className="text-sm text-muted-foreground">{booking.numberOfGuests} Guests · {booking.numberOfNights} Nights</p>
-                                                    <p className="font-bold text-[var(--gold)]">${booking.totalAmount}</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </Card>
+                                {recentBookings.map(booking => (
+                                    <BookingActions
+                                        key={booking.id}
+                                        booking={{
+                                            id: booking.id,
+                                            confirmationNumber: booking.confirmationNumber,
+                                            checkInDate: booking.checkInDate.toISOString(),
+                                            checkOutDate: booking.checkOutDate.toISOString(),
+                                            numberOfGuests: booking.numberOfGuests,
+                                            numberOfNights: booking.numberOfNights,
+                                            totalAmount: Number(booking.totalAmount),
+                                            status: booking.status,
+                                            room: booking.room ? {
+                                                name: booking.room.name,
+                                                roomNumber: booking.room.roomNumber
+                                            } : null
+                                        }}
+                                    />
                                 ))}
                             </div>
                         ) : (
-                            <Card className="p-8 text-center text-muted-foreground border-dashed">
-                                <Calendar className="w-12 h-12 mx-auto mb-4 opacity-20" />
-                                <p>No bookings found linked to your email.</p>
-                                <Button variant="link" asChild className="text-[var(--gold)]">
-                                    <a href="/chat">Book a stay now</a>
-                                </Button>
-                            </Card>
+                            <div className="rounded-2xl border-2 border-dashed border-[var(--border)] p-12 text-center">
+                                <div className="w-16 h-16 rounded-full bg-[var(--surface-dim)] flex items-center justify-center mx-auto mb-4">
+                                    <Calendar className="w-8 h-8 text-[var(--muted)]" />
+                                </div>
+                                <h3 className="text-lg font-semibold text-[var(--foreground)] mb-2">
+                                    No reservations yet
+                                </h3>
+                                <p className="text-sm text-[var(--muted)] mb-6 max-w-sm mx-auto">
+                                    Start planning your perfect getaway. Chat with our AI concierge to find the ideal room.
+                                </p>
+                                <Link
+                                    href="/chat"
+                                    className="inline-flex items-center gap-2 px-6 py-3 rounded-xl gradient-gold text-white font-medium shadow-md hover:shadow-lg transition-all"
+                                >
+                                    <MessageSquare className="w-4 h-4" />
+                                    Start Booking
+                                </Link>
+                            </div>
                         )}
-                    </div>
+                    </section>
                 </div>
             </div>
+
             <Footer />
         </main>
     );

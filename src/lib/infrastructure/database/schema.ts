@@ -48,6 +48,7 @@ export const viewTypeEnum = pgEnum('view_type', [
 export const bookingStatusEnum = pgEnum('booking_status', [
     'pending',
     'confirmed',
+    'checked_in',
     'cancelled',
     'completed',
     'no_show'

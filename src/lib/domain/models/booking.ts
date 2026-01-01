@@ -13,11 +13,12 @@
  * - src/lib/domain/services/booking-service.ts (Service managing this model)
  * - src/lib/infrastructure/database/schema.ts (DB representation)
  */
-import { differenceInDays, isAfter, isBefore } from 'date-fns';
+import { differenceInDays, differenceInHours, isAfter, isBefore } from 'date-fns';
 
 export enum BookingStatus {
     PENDING = 'pending',
     CONFIRMED = 'confirmed',
+    CHECKED_IN = 'checked_in',
     CANCELLED = 'cancelled',
     COMPLETED = 'completed',
     NO_SHOW = 'no_show',
@@ -96,8 +97,32 @@ export class Booking {
     get updatedAt(): Date { return this.props.updatedAt; }
 
     canBeCancelled(): boolean {
-        if (this.props.status === BookingStatus.CANCELLED || this.props.status === BookingStatus.COMPLETED) return false;
-        return isAfter(this.props.checkInDate, new Date());
+        // Cannot cancel if already cancelled, checked-in, or completed
+        if (
+            this.props.status === BookingStatus.CANCELLED ||
+            this.props.status === BookingStatus.CHECKED_IN ||
+            this.props.status === BookingStatus.COMPLETED
+        ) {
+            return false;
+        }
+
+        // Cannot cancel within 24 hours of check-in
+        const now = new Date();
+        const hoursUntilCheckIn = differenceInHours(this.props.checkInDate, now);
+
+        return hoursUntilCheckIn >= 24;
+    }
+
+    checkIn(): void {
+        if (this.props.status !== BookingStatus.CONFIRMED) {
+            throw new Error('Only confirmed bookings can be checked in');
+        }
+        const now = new Date();
+        if (isBefore(now, this.props.checkInDate)) {
+            throw new Error('Cannot check in before check-in date');
+        }
+        this.props.status = BookingStatus.CHECKED_IN;
+        this.props.updatedAt = new Date();
     }
 
     cancel(): void {

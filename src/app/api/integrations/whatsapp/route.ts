@@ -3,6 +3,18 @@ import { IntegratedChatRepository } from '@/lib/infrastructure/database/reposito
 import { openai } from '@ai-sdk/openai';
 import { generateText, stepCountIs } from 'ai';
 
+/**
+ * Escape XML special characters to prevent injection in TwiML responses.
+ */
+function escapeXml(text: string): string {
+    return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&apos;');
+}
+
 export async function POST(req: Request) {
     try {
         const formData = await req.formData();
@@ -12,8 +24,6 @@ export async function POST(req: Request) {
         if (!body || !from) {
             return new Response('Missing Body or From', { status: 400 });
         }
-
-        console.log(`📩 WhatsApp Message from ${from}: ${body}`);
 
         // 1. Get History
         const history = await IntegratedChatRepository.getHistory('whatsapp', from);
@@ -31,8 +41,7 @@ export async function POST(req: Request) {
         } = await ChatOrchestrator.processMessage(conversation);
 
         if (!isValid) {
-            // Return error as TwiML
-            const xml = `<?xml version="1.0" encoding="UTF-8"?><Response><Message>${validationError || "Error processing message"}</Message></Response>`;
+            const xml = `<?xml version="1.0" encoding="UTF-8"?><Response><Message>${escapeXml(validationError || "Error processing message")}</Message></Response>`;
             return new Response(xml, { headers: { 'Content-Type': 'text/xml' } });
         }
 
@@ -53,14 +62,13 @@ export async function POST(req: Request) {
         await IntegratedChatRepository.appendToHistory('whatsapp', from, messagesToSave);
 
         // 6. Send Response via TwiML
-        const xml = `<?xml version="1.0" encoding="UTF-8"?><Response><Message>${aiText}</Message></Response>`;
+        const xml = `<?xml version="1.0" encoding="UTF-8"?><Response><Message>${escapeXml(aiText)}</Message></Response>`;
         return new Response(xml, {
             headers: { 'Content-Type': 'text/xml' }
         });
 
     } catch (error) {
         console.error('WhatsApp Webhook Error:', error);
-        // Fallback TwiML
         const xml = `<?xml version="1.0" encoding="UTF-8"?><Response><Message>Sorry, I encountered an error.</Message></Response>`;
         return new Response(xml, {
             status: 200, // Always return 200 to Twilio to avoid retries on logic error
