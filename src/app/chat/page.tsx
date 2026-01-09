@@ -10,13 +10,17 @@ import ReactMarkdown from "react-markdown";
 import { cn } from "@/lib/utils";
 import { ToolResult } from "@/components/chat/tool-result";
 import { FadeInText } from "@/components/chat/typewriter-text";
+import { SuggestionChips, INITIAL_SUGGESTIONS } from "@/components/chat/suggestion-chips";
 
 import { useSearchParams } from "next/navigation";
 
 function ChatInterfaceContent() {
     const [input, setInput] = useState("");
+    const [suggestions, setSuggestions] = useState<string[]>(INITIAL_SUGGESTIONS);
+    const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
     const searchParams = useSearchParams();
     const hasAutoSent = useRef(false);
+    const hasSentFirstMessage = useRef(false);
 
     const welcomeMessage: TextUIPart = {
         type: 'text',
@@ -74,9 +78,49 @@ function ChatInterfaceContent() {
 
         const userMessage = input;
         setInput("");
+        setSuggestions([]); // Clear suggestions when user sends a message
+        hasSentFirstMessage.current = true;
 
         sendMessage({ text: userMessage });
     };
+
+    // Handle suggestion chip click
+    const handleSuggestionClick = (suggestion: string) => {
+        setSuggestions([]);
+        hasSentFirstMessage.current = true;
+        sendMessage({ text: suggestion });
+    };
+
+    // Fetch dynamic suggestions after AI responds
+    useEffect(() => {
+        const fetchSuggestions = async () => {
+            // Only fetch if we have user messages (not just welcome)
+            const userMessages = messages.filter(m => (m.role as string) === 'user');
+            if (userMessages.length === 0) return;
+
+            // Don't fetch while streaming
+            if (status !== 'ready') return;
+
+            setIsLoadingSuggestions(true);
+            try {
+                const response = await fetch('/api/suggestions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ messages }),
+                });
+                const data = await response.json();
+                if (data.suggestions && Array.isArray(data.suggestions)) {
+                    setSuggestions(data.suggestions);
+                }
+            } catch (error) {
+                console.error('Failed to fetch suggestions:', error);
+            } finally {
+                setIsLoadingSuggestions(false);
+            }
+        };
+
+        fetchSuggestions();
+    }, [messages, status]);
 
     const handleToolResult = (toolCallId: string, result: any) => {
         const text = `Here are my booking details:
@@ -350,41 +394,54 @@ Special Requests: ${result.specialRequests || 'None'}`;
 
             {/* Input Area */}
             <div className="border-t border-[var(--border)] bg-[var(--background)]">
-                <div className="max-w-3xl mx-auto px-4 py-4">
-                    <form onSubmit={handleSubmit} className="relative">
-                        <input
-                            value={input}
-                            onChange={(e) => setInput(e.target.value)}
-                            placeholder="Type your message..."
-                            className={cn(
-                                "w-full px-5 py-3.5 pr-14 rounded-full",
-                                "bg-[var(--surface)] border border-[var(--border)]",
-                                "text-[15px] text-[var(--foreground)] placeholder:text-[var(--muted)]",
-                                "shadow-sm transition-all duration-200",
-                                "focus:outline-none focus:border-[var(--gold)] focus:shadow-[0_0_0_3px_var(--ring)]",
-                                "disabled:opacity-50 disabled:cursor-not-allowed"
-                            )}
-                            disabled={isLoading}
-                        />
-                        <button
-                            type="submit"
-                            disabled={isLoading || !input.trim()}
-                            className={cn(
-                                "absolute right-2 top-1/2 -translate-y-1/2",
-                                "w-10 h-10 rounded-full flex items-center justify-center",
-                                "transition-all duration-200",
-                                input.trim() && !isLoading
-                                    ? "gradient-gold text-white shadow-md hover:shadow-lg hover:scale-105"
-                                    : "bg-[var(--surface-dim)] text-[var(--muted)] cursor-not-allowed"
-                            )}
-                        >
-                            <Send className="w-4 h-4" />
-                            <span className="sr-only">Send message</span>
-                        </button>
-                    </form>
-                    <p className="text-center mt-3 text-[11px] text-[var(--muted)]">
-                        AI responses may not always be accurate. Please verify important booking details.
-                    </p>
+                <div className="max-w-3xl mx-auto">
+                    {/* Suggestion Chips */}
+                    <AnimatePresence>
+                        {!isLoading && suggestions.length > 0 && (
+                            <SuggestionChips
+                                suggestions={suggestions}
+                                onSelect={handleSuggestionClick}
+                                isLoading={isLoadingSuggestions}
+                            />
+                        )}
+                    </AnimatePresence>
+
+                    <div className="px-4 py-4">
+                        <form onSubmit={handleSubmit} className="relative">
+                            <input
+                                value={input}
+                                onChange={(e) => setInput(e.target.value)}
+                                placeholder="Type your message..."
+                                className={cn(
+                                    "w-full px-5 py-3.5 pr-14 rounded-full",
+                                    "bg-[var(--surface)] border border-[var(--border)]",
+                                    "text-[15px] text-[var(--foreground)] placeholder:text-[var(--muted)]",
+                                    "shadow-sm transition-all duration-200",
+                                    "focus:outline-none focus:border-[var(--gold)] focus:shadow-[0_0_0_3px_var(--ring)]",
+                                    "disabled:opacity-50 disabled:cursor-not-allowed"
+                                )}
+                                disabled={isLoading}
+                            />
+                            <button
+                                type="submit"
+                                disabled={isLoading || !input.trim()}
+                                className={cn(
+                                    "absolute right-2 top-1/2 -translate-y-1/2",
+                                    "w-10 h-10 rounded-full flex items-center justify-center",
+                                    "transition-all duration-200",
+                                    input.trim() && !isLoading
+                                        ? "gradient-gold text-white shadow-md hover:shadow-lg hover:scale-105"
+                                        : "bg-[var(--surface-dim)] text-[var(--muted)] cursor-not-allowed"
+                                )}
+                            >
+                                <Send className="w-4 h-4" />
+                                <span className="sr-only">Send message</span>
+                            </button>
+                        </form>
+                        <p className="text-center mt-3 text-[11px] text-[var(--muted)]">
+                            AI responses may not always be accurate. Please verify important booking details.
+                        </p>
+                    </div>
                 </div>
             </div >
         </div >
